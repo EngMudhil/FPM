@@ -16,8 +16,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className={font.className}>{children}</body>
+    // Browser extensions (e.g. QuillBot `data-qb-installed`) often mutate <html>/<body>
+    // before hydration; suppress known attribute mismatches on these root nodes only.
+    <html lang="en" suppressHydrationWarning>
+      <body className={font.className} suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
