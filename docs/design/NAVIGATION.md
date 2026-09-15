@@ -26,10 +26,10 @@ REAL ACCOUNTS
 SYSTEM
   Settings ▾
     Security (profile, password, login history)
+    Workspace
+    Members
     Data Management
     Audit Log
-    Workspace          # SECONDARY
-    Members            # SECONDARY / FUTURE
 ```
 
 ## Mapping from screenshots

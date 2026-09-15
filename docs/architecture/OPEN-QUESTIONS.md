@@ -1,6 +1,6 @@
 # OPEN-QUESTIONS
 
-Status: Updated FPM-021 (Lead financial pack).  
+Status: Updated FPM-022 (Lead settings/storage decisions).  
 Owner: Lead (escalation).
 
 | ID | Question | Why it matters | Affected modules | Suggested owner | Blocking? |
@@ -14,10 +14,10 @@ Owner: Lead (escalation).
 | OQ-007 | ~~Argon2id vs bcrypt~~ | — | — | — | **Resolved (FPM-003): bcryptjs** |
 | OQ-008 | ~~Decimal vs minor units~~ | — | — | — | **Resolved (FPM-003): numeric(20,8) + decimal.js** |
 | OQ-009 | ~~Seed default timezone + currency~~ | — | — | — | **Resolved (FPM-003): UTC + USD seed defaults** |
-| OQ-010 | When to ship members UI | Scope | Auth, Settings | Lead | **Deferred (post-MVP)** |
+| OQ-010 | ~~When to ship members UI~~ | — | — | — | **Resolved (ADR-015 / FPM-022): ship workspace + members now** |
 | OQ-011 | Missing `5.png` | Possible unknown screen | Design | Lead | **Deferred / ignore** |
 | OQ-012 | ~~Combined funded+real cards~~ | — | — | — | **Resolved (ADR-014): same-currency only; else omit** |
-| OQ-013 | ~~Object storage provider~~ | Certs/backups | DevOps | DevOps + Security | **Partial (FPM-009): local FS + ADR-010; S3 still open for prod** |
+| OQ-013 | ~~Object storage provider~~ | — | — | — | **Resolved (ADR-015): local private volumes for VPS; S3 FUTURE** |
 | OQ-014 | ~~Restore staging vs single transaction~~ | — | — | — | **Resolved (FPM-017 / ADR-013)** |
 | OQ-015 | ~~Broker EquitySnapshot lifecycle~~ | — | — | — | **Resolved (FPM-014 / ADR-012): reject duplicates** |
 | OQ-016 | ~~Confirm ScaleEvent resync rule~~ | — | — | — | **Resolved (FPM-010 / ADR-011)** |

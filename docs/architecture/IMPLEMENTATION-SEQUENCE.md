@@ -39,6 +39,7 @@ Do **not** build the entire backend first. Prioritize the financial core.
 | FPM-019 | Full QA | Cross suite | Release gate | Tests asserting NEW date basis ≠ old `requestedAt` behavior |
 | FPM-020 | MT5 Integration | FUTURE | After stable core | — |
 | FPM-021 | Financial OQ metric pack | Done | Post-MVP | ADR-014 resolves OQ-001–006/012/017; domain owns formulas |
+| FPM-022 | Workspace / members / security | Done | Post-MVP | ADR-015; OQ-010/013 closed |
 
 ### Auth note
 

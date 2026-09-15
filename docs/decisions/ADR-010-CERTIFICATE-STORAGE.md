@@ -22,4 +22,4 @@ S3-compatible providers remain the production target and can replace the storage
 
 * Dev/test needs writable local disk.
 * Backup/restore (FPM-016/017) must include this directory / object set.
-* OQ-013 production provider choice remains open for DevOps; local adapter unblocks FPM-009.
+* OQ-013 production choice for VPS deploy is **local private volumes** (ADR-015); S3-compatible remains FUTURE.

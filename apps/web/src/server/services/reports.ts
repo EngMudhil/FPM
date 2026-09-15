@@ -159,6 +159,9 @@ export async function getReportsSnapshot(
       withdrawalRows.map((row) => row.withdrawal),
     ),
     phaseDistribution,
-    deferred: ['Members UI deferred (OQ-010)', 'S3 object storage still prod follow-up (OQ-013)'],
+    deferred: [
+      'S3-compatible storage remains FUTURE (ADR-015)',
+      'MT5 integration remains FUTURE (ADR-004)',
+    ],
   };
 }

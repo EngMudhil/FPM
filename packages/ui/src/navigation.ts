@@ -35,6 +35,8 @@ export const fpmNavGroups: NavGroup[] = [
     label: 'System',
     items: [
       { label: 'Security', href: '/settings/security' },
+      { label: 'Workspace', href: '/settings/workspace' },
+      { label: 'Members', href: '/settings/members' },
       { label: 'Data Management', href: '/settings/data' },
       { label: 'Audit Log', href: '/settings/audit-log' },
     ],

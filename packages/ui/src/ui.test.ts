@@ -22,6 +22,17 @@ describe('navigation IA', () => {
     ]);
   });
 
+  it('includes Spec system settings routes', () => {
+    const system = fpmNavGroups.find((g) => g.label === 'System');
+    expect(system?.items.map((i) => i.href)).toEqual([
+      '/settings/security',
+      '/settings/workspace',
+      '/settings/members',
+      '/settings/data',
+      '/settings/audit-log',
+    ]);
+  });
+
   it('marks nested routes active', () => {
     expect(isNavItemActive('/firms/new', '/firms')).toBe(true);
     expect(isNavItemActive('/accounts', '/firms')).toBe(false);

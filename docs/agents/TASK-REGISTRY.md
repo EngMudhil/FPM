@@ -32,7 +32,8 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-018 | Production Deployment | PASS | 972e18f · PR #16 merged |
 | FPM-019 | Full QA | PASS | See completion record (this branch) |
 | FPM-020 | MT5 Integration | PASS | Spike only — ADR-004 reaffirmed FUTURE |
-| FPM-021 | Financial OQ metric pack | PASS | ADR-014 · this branch |
+| FPM-021 | Financial OQ metric pack | PASS | ADR-014 · PR #18 merged |
+| FPM-022 | Workspace/members + storage decision | PASS | ADR-015 · this branch |
 
 ### FPM-019 completion
 
@@ -52,12 +53,18 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 * **Summary:** Lead decided OQ-001–006, 012, 017 via ADR-014; `@fpm/financial` + dashboard/broker UI wired
 * **Artifact:** `docs/decisions/ADR-014-FINANCIAL-METRIC-PACK.md`
 
+### FPM-022 completion
+
+* **Date:** 2026-09-15
+* **Summary:** Workspace + Members UI; Security settings; OQ-010/013 closed via ADR-015 (local FS for VPS)
+* **Artifact:** `docs/decisions/ADR-015-SETTINGS-AND-STORAGE.md`
+
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| — | Post-MVP hardening | Lead | Production use | CI e2e, S3, workers | Lead | Backlog |
+| — | Post-MVP hardening | Lead | Production use | CI e2e optional, workers, S3 if off-box needed | Lead | Backlog |
 
 ## Recommended next task
 
-**Post-MVP:** enable CI Playwright; S3 for certificates (OQ-013); Members UI still deferred (OQ-010).
+**Post-MVP:** optional CI Playwright job; dedicated backup workers; S3 only if volumes are insufficient.

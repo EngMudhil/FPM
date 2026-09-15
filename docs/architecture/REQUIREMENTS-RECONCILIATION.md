@@ -118,7 +118,8 @@ Classification values (exactly one per row):
 | --- | --- | --- | --- | --- | --- | --- |
 | MT5 live integration | FUTURE | ADR-004; platform text in UI | Deferred | Manual workflow first | Optional metadata only | Spike later |
 | Explicit FX conversion | FUTURE | Spec allows group-or-convert | Deferred | No rates defined | Group-by-currency until then | Rate source |
-| Members / workspace settings UI | SECONDARY / FUTURE | Spec routes | After CORE | Single OWNER enough for CORE | Schema ready | Priority vs audit |
+| Members / workspace settings UI | SECONDARY | Spec routes | **Shipped FPM-022 / ADR-015** | Single OWNER enough for CORE; multi-member available | Routes live | — |
+| Object storage provider | BOTH | Spec storage | **Local volumes for VPS (ADR-015)**; S3 FUTURE | Matches Docker deploy | Volume backups required | — |
 | Screenshot `5.png` | UNRESOLVED | Missing file | Ignore until provided | Unknown content | Possible screen gap | Provide file? |
 
 ---

@@ -57,6 +57,9 @@ export default async function AuditLogPage({
             <option value="scale-events">scale-events</option>
             <option value="certificates">certificates</option>
             <option value="brokers">brokers</option>
+            <option value="workspace">workspace</option>
+            <option value="members">members</option>
+            <option value="security">security</option>
             <option value="exports">exports</option>
           </Select>
         </label>
