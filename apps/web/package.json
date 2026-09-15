@@ -13,17 +13,23 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fpm/db": "workspace:*",
+    "@fpm/money": "workspace:*",
     "@fpm/types": "workspace:*",
     "@fpm/ui": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "drizzle-orm": "^0.38.3",
     "next": "^15.1.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@fpm/config": "workspace:*",
     "@playwright/test": "^1.49.1",
     "@tailwindcss/postcss": "^4.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

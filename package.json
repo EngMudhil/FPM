@@ -11,12 +11,15 @@
     "dev": "pnpm --filter @fpm/web dev",
     "build": "pnpm --filter @fpm/web build",
     "start": "pnpm --filter @fpm/web start",
-    "lint": "eslint packages --max-warnings=0 && pnpm --filter @fpm/web lint",
+    "lint": "eslint packages apps/web/src --max-warnings=0",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @fpm/web test:e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @fpm/db db:generate",
+    "db:migrate": "pnpm --filter @fpm/db db:migrate",
+    "db:seed": "pnpm --filter @fpm/db db:seed",
     "prepare": "husky"
   },
   "devDependencies": {
