@@ -25,19 +25,19 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-011 | Dashboard | PASS | e1ad878 · PR #9 merged |
 | FPM-012 | Reports | PASS | c0b3ccc · PR #10 merged |
 | FPM-013 | Excel Export | PASS | b481f5a · PR #11 merged |
-| FPM-014 | Broker Accounts | PASS | See completion record (this branch) |
+| FPM-014 | Broker Accounts | PASS | 1e12039 · PR #12 merged |
+| FPM-015 | Audit | PASS | See completion record (this branch) |
 
-### FPM-014 completion
+### FPM-015 completion
 
 * **Date:** 2026-09-15
-* **Summary:** brokers + broker_accounts + deposits/withdrawals + equity_snapshots; net deposited + latest equity via Financial Domain; duplicate snapshots rejected (ADR-012); P/L+ROI deferred (OQ-003)
-* **Migration:** `0006_broker_domain.sql`
+* **Summary:** append-only `audit_logs`; ADMIN UI at `/settings/audit-log`; instrumented firms/withdrawals/scale CREATE(+firm UPDATE/DELETE) and Excel EXPORT
+* **Migration:** `0007_audit_logs.sql`
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-015 | Audit | Backend + Frontend + Security | Mutations instrumented | Append-only audit UI | Security + Lead | `/settings/audit-log` |
 | FPM-016 | Backup | DevOps + Backend | Storage | Spec ZIP format + job | Security + Lead | Backup jobs |
 | FPM-017 | Restore | DevOps + Database + Security | FPM-016 | Spec-safe restore | Security + Lead + QA | Restore jobs |
 | FPM-018 | Production Deployment | DevOps | Stable CORE+ops | Caddy/Docker/VPS docs+config | Security + Lead | Deploy artifacts |
@@ -46,4 +46,4 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 
 ## Recommended next task
 
-**FPM-015 — Audit** (after FPM-014 PASS)
+**FPM-016 — Backup** (after FPM-015 PASS)

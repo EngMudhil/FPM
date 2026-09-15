@@ -3,6 +3,7 @@ import { getDb } from '@/server/db';
 import { AppError, toPublicError } from '@/server/errors';
 import { requirePrimaryWorkspace, requireWorkspaceRole } from '@/server/authz/workspace';
 import { buildModuleExport, isExportModule } from '@/server/export/modules';
+import { writeAuditLog } from '@/server/services/audit';
 
 export async function GET(_request: Request, context: { params: Promise<{ module: string }> }) {
   try {
@@ -13,6 +14,14 @@ export async function GET(_request: Request, context: { params: Promise<{ module
     const access = await requirePrimaryWorkspace();
     await requireWorkspaceRole(access.workspace.id, 'MEMBER');
     const { filename, buffer } = await buildModuleExport(getDb(), access.workspace.id, moduleParam);
+    await writeAuditLog(getDb(), {
+      workspaceId: access.workspace.id,
+      actorUserId: access.user.id,
+      action: 'EXPORT',
+      module: 'exports',
+      recordType: 'ExcelExport',
+      metadata: { module: moduleParam, filename },
+    });
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {

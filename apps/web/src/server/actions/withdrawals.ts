@@ -14,6 +14,7 @@ import {
   listWithdrawals,
   updateWithdrawal,
 } from '../services/withdrawals';
+import { writeAuditLog } from '../services/audit';
 import { idSchema } from '../validation';
 import {
   parseDateInput,
@@ -111,6 +112,15 @@ export async function createWithdrawalAction(formData: FormData) {
       requestedAt,
       receivedAt,
       notes: parsed.data.notes,
+    });
+    await writeAuditLog(getDb(), {
+      workspaceId: access.workspace.id,
+      actorUserId: access.user.id,
+      action: 'CREATE',
+      module: 'withdrawals',
+      recordType: 'Withdrawal',
+      recordId: withdrawal.id,
+      newValue: { amount: withdrawal.amount, status: withdrawal.status },
     });
     revalidatePath('/withdrawals');
     revalidatePath('/dashboard');

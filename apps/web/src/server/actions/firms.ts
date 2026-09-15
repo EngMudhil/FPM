@@ -13,6 +13,7 @@ import {
   listFirms,
   updateFirm,
 } from '../services/firms';
+import { writeAuditLog } from '../services/audit';
 import {
   firmCreateSchema,
   firmIdSchema,
@@ -65,6 +66,15 @@ export async function createFirmAction(formData: FormData) {
       throw new AppError('VALIDATION', 'Invalid firm input', 400, parsed.error.flatten());
     }
     const firm = await createFirm(getDb(), access.workspace.id, parsed.data);
+    await writeAuditLog(getDb(), {
+      workspaceId: access.workspace.id,
+      actorUserId: access.user.id,
+      action: 'CREATE',
+      module: 'firms',
+      recordType: 'Firm',
+      recordId: firm.id,
+      newValue: { name: firm.name },
+    });
     revalidatePath('/firms');
     redirect(`/firms/${firm.id}`);
   } catch (error) {
@@ -86,6 +96,15 @@ export async function updateFirmAction(firmId: string, formData: FormData) {
       throw new AppError('VALIDATION', 'Invalid firm input', 400, parsed.error.flatten());
     }
     await updateFirm(getDb(), access.workspace.id, id, parsed.data);
+    await writeAuditLog(getDb(), {
+      workspaceId: access.workspace.id,
+      actorUserId: access.user.id,
+      action: 'UPDATE',
+      module: 'firms',
+      recordType: 'Firm',
+      recordId: id,
+      newValue: parsed.data,
+    });
     revalidatePath('/firms');
     revalidatePath(`/firms/${id}`);
     redirect(`/firms/${id}`);
@@ -113,6 +132,14 @@ export async function deleteFirmAction(firmId: string) {
     const access = await requireFirmWorkspace('ADMIN');
     const id = firmIdSchema.parse(firmId);
     await deleteFirm(getDb(), access.workspace.id, id);
+    await writeAuditLog(getDb(), {
+      workspaceId: access.workspace.id,
+      actorUserId: access.user.id,
+      action: 'DELETE',
+      module: 'firms',
+      recordType: 'Firm',
+      recordId: id,
+    });
     revalidatePath('/firms');
     redirect('/firms');
   } catch (error) {
