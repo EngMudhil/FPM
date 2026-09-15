@@ -122,6 +122,72 @@ export function utcMonthBounds(reference: Date = new Date()): {
   };
 }
 
+export type ReportPeriod = 'month' | 'quarter' | 'year' | 'all';
+
+/** Half-open UTC period bounds for reports. `all` returns null (no date filter). */
+export function utcPeriodBounds(
+  period: ReportPeriod,
+  reference: Date = new Date(),
+): { start: Date; end: Date } | null {
+  if (period === 'all') return null;
+  const y = reference.getUTCFullYear();
+  const m = reference.getUTCMonth();
+  if (period === 'month') {
+    return {
+      start: new Date(Date.UTC(y, m, 1, 0, 0, 0, 0)),
+      end: new Date(Date.UTC(y, m + 1, 1, 0, 0, 0, 0)),
+    };
+  }
+  if (period === 'quarter') {
+    const qStart = Math.floor(m / 3) * 3;
+    return {
+      start: new Date(Date.UTC(y, qStart, 1, 0, 0, 0, 0)),
+      end: new Date(Date.UTC(y, qStart + 3, 1, 0, 0, 0, 0)),
+    };
+  }
+  return {
+    start: new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0)),
+    end: new Date(Date.UTC(y + 1, 0, 1, 0, 0, 0, 0)),
+  };
+}
+
+/**
+ * Sum recognized payouts grouped by a caller-supplied key, still per currency
+ * (never mixes FX). Optional period filter on receivedAt.
+ */
+export function sumRecognizedByKey(
+  rows: Array<WithdrawalRecord & { key: string }>,
+  range?: { start: Date; end: Date } | null,
+  currencyFilter?: string | null,
+): Record<string, Record<string, string>> {
+  const totals: Record<string, Record<string, Money>> = {};
+  const startMs = range?.start.getTime();
+  const endMs = range?.end.getTime();
+  const currency = currencyFilter?.trim().toUpperCase() || null;
+
+  for (const row of rows) {
+    if (!isRecognizedPayout(row) || !row.receivedAt) continue;
+    if (currency && row.currency !== currency) continue;
+    if (startMs !== undefined && endMs !== undefined) {
+      const t = row.receivedAt.getTime();
+      if (t < startMs || t >= endMs) continue;
+    }
+    const money = Money.fromString(row.amount, row.currency);
+    const bucket = totals[row.key] ?? (totals[row.key] = {});
+    const existing = bucket[money.currency];
+    bucket[money.currency] = existing ? existing.add(money) : money;
+  }
+
+  return Object.fromEntries(
+    Object.entries(totals).map(([key, byCurrency]) => [
+      key,
+      Object.fromEntries(
+        Object.entries(byCurrency).map(([code, money]) => [code, money.toString()]),
+      ),
+    ]),
+  );
+}
+
 export function countWithdrawalsByStatus(
   withdrawals: Array<{ status: WithdrawalStatus }>,
 ): Record<WithdrawalStatus, number> {
