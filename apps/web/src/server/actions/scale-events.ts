@@ -13,6 +13,7 @@ import {
   listScaleEvents,
   updateScaleEvent,
 } from '../services/scale-events';
+import { writeAuditLog } from '../services/audit';
 import { idSchema } from '../validation';
 import {
   parseDateInput,
@@ -105,6 +106,15 @@ export async function createScaleEventAction(formData: FormData) {
       toSize: parsed.data.toSize,
       scaledAt,
       notes: parsed.data.notes,
+    });
+    await writeAuditLog(getDb(), {
+      workspaceId: access.workspace.id,
+      actorUserId: access.user.id,
+      action: 'CREATE',
+      module: 'scale-events',
+      recordType: 'ScaleEvent',
+      recordId: scaleEvent.id,
+      newValue: { fromSize: scaleEvent.fromSize, toSize: scaleEvent.toSize },
     });
     revalidatePath('/scale-events');
     revalidatePath(`/accounts/${scaleEvent.tradingAccountId}`);

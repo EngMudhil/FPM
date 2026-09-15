@@ -1,4 +1,13 @@
-import { index, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  index,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 export const workspaceRoleEnum = pgEnum('workspace_role', ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']);
 
@@ -355,6 +364,37 @@ export const equitySnapshots = pgTable(
   ],
 );
 
+/** Append-only audit trail. Never update or delete rows in application code. */
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    actorUserId: text('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    action: text('action').notNull(),
+    module: text('module').notNull(),
+    recordType: text('record_type'),
+    recordId: text('record_id'),
+    oldValue: jsonb('old_value'),
+    newValue: jsonb('new_value'),
+    metadata: jsonb('metadata'),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('audit_logs_workspace_created_at_idx').on(table.workspaceId, table.createdAt),
+    index('audit_logs_actor_user_id_idx').on(table.actorUserId),
+    index('audit_logs_workspace_action_module_idx').on(
+      table.workspaceId,
+      table.action,
+      table.module,
+    ),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -372,6 +412,7 @@ export type BrokerAccount = typeof brokerAccounts.$inferSelect;
 export type BrokerDeposit = typeof brokerDeposits.$inferSelect;
 export type BrokerWithdrawal = typeof brokerWithdrawals.$inferSelect;
 export type EquitySnapshot = typeof equitySnapshots.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
 export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
 export type WithdrawalStatus = (typeof withdrawalStatusEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];
