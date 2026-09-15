@@ -294,12 +294,13 @@ export default async function DashboardPage() {
                 color: 'var(--fpm-text-muted)',
               }}
             >
-              {new Date()
-                .toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })
+              {new Intl.DateTimeFormat('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                timeZone: 'UTC',
+              })
+                .format(new Date())
                 .toUpperCase()}
             </div>
           </div>
