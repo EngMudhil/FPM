@@ -22,19 +22,19 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-008 | Withdrawal UI | PASS | a5b55f8 · PR #6 merged |
 | FPM-009 | Certificates | PASS | 90369ca · PR #7 merged |
 | FPM-010 | Scale Events | PASS | 3e60a59 · PR #8 merged |
-| FPM-011 | Dashboard | PASS | See completion record (this branch) |
+| FPM-011 | Dashboard | PASS | e1ad878 · PR #9 merged |
+| FPM-012 | Reports | PASS | See completion record (this branch) |
 
-### FPM-011 completion
+### FPM-012 completion
 
 * **Date:** 2026-09-15
-* **Summary:** Funded dashboard consuming `@fpm/financial` only for money metrics; CTA Log Withdrawal; period cards by `receivedAt` (UTC month); pending; status/phase distributions; recent withdrawals & scale events
-* **Deferred:** funded capital (OQ-001), avg/growth/yield (OQ-002), broker section (FPM-014)
+* **Summary:** Reports page with period (month/quarter/year/all) + currency filters; firm/account recognized income breakdowns via `@fpm/financial`; status/phase distributions
+* **Deferred:** avg payout (OQ-002), capital (OQ-001), broker (FPM-014)
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-012 | Reports | Frontend + Financial | FPM-007 | Period reports; currency-safe | Lead + QA | `/reports` |
 | FPM-013 | Excel Export | Backend + QA | Core modules | Injection-safe exports | Lead + QA | Export actions |
 | FPM-014 | Broker Accounts | Frontend + Backend + Financial | FPM-003+ | Full real domain slice | Lead + QA + Database | `/broker-accounts/*` |
 | FPM-015 | Audit | Backend + Frontend + Security | Mutations instrumented | Append-only audit UI | Security + Lead | `/settings/audit-log` |
@@ -46,4 +46,4 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 
 ## Recommended next task
 
-**FPM-012 — Reports** (after FPM-011 PASS)
+**FPM-013 — Excel Export** (after FPM-012 PASS)
