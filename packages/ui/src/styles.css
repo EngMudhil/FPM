@@ -596,6 +596,11 @@
   font-weight: 500;
 }
 
+.fpm-sidebar__icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
 .fpm-sidebar__link:hover {
   background: var(--fpm-hover);
   color: var(--fpm-text);
@@ -605,6 +610,10 @@
   background: var(--fpm-primary-pale);
   color: var(--fpm-primary);
   font-weight: 600;
+}
+
+.fpm-sidebar__link[aria-current='page'] .fpm-sidebar__icon {
+  opacity: 1;
 }
 
 .fpm-sidebar__footer {

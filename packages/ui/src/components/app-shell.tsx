@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { fpmNavGroups, isNavItemActive, type NavGroup } from '../navigation';
 import { Button } from './button';
+import { NavIcon } from './nav-icon';
 
 export type SidebarProps = {
   pathname: string;
@@ -48,7 +49,8 @@ export function Sidebar({
                   aria-current={active ? 'page' : undefined}
                   onClick={onNavigate}
                 >
-                  {item.label}
+                  {item.icon ? <NavIcon name={item.icon} /> : null}
+                  <span>{item.label}</span>
                 </a>
               );
             })}

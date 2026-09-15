@@ -1,14 +1,14 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import {
   brokerAccounts,
   brokerDeposits,
   brokerWithdrawals,
+  brokers,
+  certificates,
   equitySnapshots,
   firms,
-  scaleEvents,
   tradingAccounts,
   withdrawals,
-  type AccountPhase,
   type Database,
   type WithdrawalStatus,
 } from '@fpm/db';
@@ -18,18 +18,21 @@ import {
   averagePayoutByCurrency,
   bestMonthByCurrency,
   brokerNetProfitLoss,
+  brokerRoi,
   combineSameCurrencyMaps,
   countRecognizedPayouts,
   countWithdrawalsByStatus,
+  equityDrawdownPercent,
   incomeYieldByCurrency,
-  largestRecognizedByCurrency,
-  portfolioGrowthByCurrency,
+  isRecognizedPayout,
+  peakEquity,
   sumCurrentFundedCapitalByCurrency,
-  sumPendingByCurrency,
   sumRecognizedByCurrency,
+  sumRecognizedByKey,
   sumRecognizedInRange,
   sumTotalFundedCapitalByCurrency,
   utcMonthBounds,
+  utcPeriodBounds,
   type WithdrawalRecord,
 } from '@fpm/financial';
 import { accountDisplayName } from './accounts';
@@ -50,65 +53,155 @@ function toRecord(row: {
   };
 }
 
+function primaryCurrency(map: Record<string, string>): string | null {
+  const keys = Object.keys(map);
+  if (keys.length === 1) return keys[0]!;
+  if (keys.includes('USD')) return 'USD';
+  return keys[0] ?? null;
+}
+
 function formatMoneyMap(map: Record<string, string>): string {
   const entries = Object.entries(map).filter(([, amount]) => amount !== 'N/A');
   if (entries.length === 0) {
-    const na = Object.values(map).some((v) => v === 'N/A');
-    return na ? 'N/A' : '—';
+    return Object.values(map).some((v) => v === 'N/A') ? 'N/A' : '—';
   }
   return entries.map(([currency, amount]) => formatDisplayMoney(amount, currency)).join(' · ');
 }
 
-function formatPercentMap(map: Record<string, string>): string {
-  const entries = Object.entries(map);
-  if (entries.length === 0) return '—';
-  return entries
-    .map(([currency, value]) =>
-      value === 'N/A' ? `N/A (${currency})` : `${formatDisplayPercent(value)} (${currency})`,
-    )
-    .join(' · ');
+function amountIn(map: Record<string, string>, currency: string | null): string {
+  if (!currency) return '0';
+  return map[currency] ?? '0';
+}
+
+function countRecognizedInRange(
+  records: WithdrawalRecord[],
+  start: Date,
+  end: Date,
+  currency?: string | null,
+): number {
+  return records.filter((row) => {
+    if (!isRecognizedPayout(row) || !row.receivedAt) return false;
+    if (currency && row.currency !== currency) return false;
+    const t = row.receivedAt.getTime();
+    return t >= start.getTime() && t < end.getTime();
+  }).length;
+}
+
+function momChangePercent(thisAmt: string, lastAmt: string): string | null {
+  const last = Money.fromString(lastAmt, 'USD').amount;
+  const cur = Money.fromString(thisAmt, 'USD').amount;
+  if (last.isZero()) return cur.isZero() ? '0%' : null;
+  const pct = cur.minus(last).div(last).times(100);
+  const sign = pct.greaterThanOrEqualTo(0) ? '+' : '';
+  return `${sign}${pct.toFixed(0)}%`;
+}
+
+function monthKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(key: string): string {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(Date.UTC(y!, m! - 1, 1)).toLocaleString('en-US', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function shortMonth(key: string): string {
+  const [, m] = key.split('-').map(Number);
+  return new Date(Date.UTC(2000, m! - 1, 1)).toLocaleString('en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
 }
 
 export type DashboardSnapshot = {
+  asOfLabel: string;
+  firstName: string | null;
   metrics: {
-    thisMonthRecognized: string;
-    lastMonthRecognized: string;
-    lifetimeRecognized: string;
-    pendingAmount: string;
     totalFundedCapital: string;
     currentFundedCapital: string;
-    portfolioGrowth: string;
-    averagePayout: string;
+    thisMonth: string;
+    thisMonthHelper: string;
+    thisMonthChange: string | null;
+    lastMonth: string;
+    lastMonthHelper: string;
+    quarterToDate: string;
+    quarterHelper: string;
+    quarterLabel: string;
+    yearToDate: string;
+    yearHelper: string;
+    yearLabel: string;
+    lifetime: string;
+    lifetimeHelper: string;
     averageMonthly: string;
     incomeYield: string;
+    averagePayout: string;
     largestWithdrawal: string;
+    largestWithdrawalFirm: string | null;
+    largestWithdrawalDate: string | null;
     bestMonth: string;
+    bestMonthHelper: string;
+    businessTenure: string;
+    businessTenureHelper: string;
     recognizedPayoutCount: number;
     activeAccountCount: number;
     totalAccountCount: number;
     firmCount: number;
+    certificateCount: number;
     paidWithdrawalCount: number;
+    brokerCount: number;
+    brokerAccountCount: number;
+    currentRealEquity: string;
+    brokerNetPl: string;
+    brokerRoi: string;
+    totalDeposits: string;
+    totalBrokerWithdrawals: string;
+    peakEquity: string;
+    tradingDrawdown: string;
     combinedManagedCapital: string;
     combinedGeneratedProfit: string;
+    fundedCapitalRaw: string;
+    realEquityRaw: string;
+    fundedPayoutsRaw: string;
+    realPlRaw: string;
   };
-  withdrawalStatusDistribution: Record<WithdrawalStatus, number>;
-  phaseDistribution: Record<AccountPhase, number>;
+  incomeByFirm: Array<{
+    name: string;
+    amount: string;
+    percent: number;
+  }>;
+  monthlyPayouts: Array<{
+    key: string;
+    label: string;
+    shortLabel: string;
+    amount: string;
+    amountRaw: number;
+    count: number;
+  }>;
+  payoutTrend: Array<{
+    key: string;
+    shortLabel: string;
+    amountRaw: number;
+  }>;
+  cumulativeIncome: Array<{
+    key: string;
+    label: string;
+    amountRaw: number;
+  }>;
+  profitByBroker: Array<{ name: string; amount: string; amountRaw: number }>;
+  profitByAccount: Array<{ name: string; amount: string; amountRaw: number }>;
   recentWithdrawals: Array<{
     id: string;
     amount: string;
     currency: string;
     status: WithdrawalStatus;
+    firmName: string;
     accountLabel: string;
     requestedAt: Date;
     receivedAt: Date | null;
-  }>;
-  recentScaleEvents: Array<{
-    id: string;
-    fromSize: string;
-    toSize: string;
-    currency: string;
-    accountLabel: string;
-    scaledAt: Date;
   }>;
 };
 
@@ -121,13 +214,26 @@ export async function getDashboardSnapshot(
     withdrawalRows,
     accountRows,
     recentWd,
-    recentScale,
     brokerAccountRows,
+    brokerRows,
     snapshotRows,
     depositRows,
     brokerWdRows,
+    firmRows,
+    certCountRows,
   ] = await Promise.all([
-    db.select().from(withdrawals).where(eq(withdrawals.workspaceId, workspaceId)),
+    db
+      .select({
+        withdrawal: withdrawals,
+        firmName: firms.name,
+        accountLabel: tradingAccounts.label,
+        accountNumber: tradingAccounts.accountNumber,
+        firmId: firms.id,
+      })
+      .from(withdrawals)
+      .innerJoin(tradingAccounts, eq(withdrawals.tradingAccountId, tradingAccounts.id))
+      .innerJoin(firms, eq(tradingAccounts.firmId, firms.id))
+      .where(eq(withdrawals.workspaceId, workspaceId)),
     db
       .select({
         phase: tradingAccounts.phase,
@@ -135,6 +241,7 @@ export async function getDashboardSnapshot(
         currentSize: tradingAccounts.currentSize,
         currency: tradingAccounts.currency,
         firmId: tradingAccounts.firmId,
+        startDate: tradingAccounts.startDate,
       })
       .from(tradingAccounts)
       .where(and(eq(tradingAccounts.workspaceId, workspaceId), isNull(tradingAccounts.archivedAt))),
@@ -150,22 +257,9 @@ export async function getDashboardSnapshot(
       .innerJoin(firms, eq(tradingAccounts.firmId, firms.id))
       .where(eq(withdrawals.workspaceId, workspaceId))
       .orderBy(desc(withdrawals.requestedAt))
-      .limit(8),
-    db
-      .select({
-        scaleEvent: scaleEvents,
-        firmName: firms.name,
-        accountLabel: tradingAccounts.label,
-        accountNumber: tradingAccounts.accountNumber,
-        currency: tradingAccounts.currency,
-      })
-      .from(scaleEvents)
-      .innerJoin(tradingAccounts, eq(scaleEvents.tradingAccountId, tradingAccounts.id))
-      .innerJoin(firms, eq(tradingAccounts.firmId, firms.id))
-      .where(eq(scaleEvents.workspaceId, workspaceId))
-      .orderBy(desc(scaleEvents.scaledAt))
-      .limit(5),
+      .limit(6),
     db.select().from(brokerAccounts).where(eq(brokerAccounts.workspaceId, workspaceId)),
+    db.select().from(brokers).where(eq(brokers.workspaceId, workspaceId)),
     db
       .select()
       .from(equitySnapshots)
@@ -173,28 +267,171 @@ export async function getDashboardSnapshot(
       .orderBy(desc(equitySnapshots.snapshotDate)),
     db.select().from(brokerDeposits).where(eq(brokerDeposits.workspaceId, workspaceId)),
     db.select().from(brokerWithdrawals).where(eq(brokerWithdrawals.workspaceId, workspaceId)),
+    db
+      .select()
+      .from(firms)
+      .where(and(eq(firms.workspaceId, workspaceId), isNull(firms.archivedAt))),
+    db
+      .select({ value: count() })
+      .from(certificates)
+      .where(eq(certificates.workspaceId, workspaceId)),
   ]);
 
-  const records = withdrawalRows.map(toRecord);
-  const bounds = utcMonthBounds(now);
+  const records = withdrawalRows.map((r) => toRecord(r.withdrawal));
+  const monthBounds = utcMonthBounds(now);
+  const quarterBounds = utcPeriodBounds('quarter', now)!;
+  const yearBounds = utcPeriodBounds('year', now)!;
   const sizeRows = accountRows.map((row) => ({
     initialSize: row.initialSize,
     currentSize: row.currentSize,
     currency: row.currency,
   }));
 
-  const phaseDistribution: Record<AccountPhase, number> = {
-    ACTIVE: 0,
-    PAUSED: 0,
-    CLOSED: 0,
-  };
-  for (const row of accountRows) {
-    phaseDistribution[row.phase] += 1;
+  const lifetime = sumRecognizedByCurrency(records);
+  const currency =
+    primaryCurrency(lifetime) ??
+    primaryCurrency(sumTotalFundedCapitalByCurrency(sizeRows)) ??
+    'USD';
+
+  const thisMap = sumRecognizedInRange(
+    records,
+    monthBounds.thisMonth.start,
+    monthBounds.thisMonth.end,
+  );
+  const lastMap = sumRecognizedInRange(
+    records,
+    monthBounds.lastMonth.start,
+    monthBounds.lastMonth.end,
+  );
+  const quarterMap = sumRecognizedInRange(records, quarterBounds.start, quarterBounds.end);
+  const yearMap = sumRecognizedInRange(records, yearBounds.start, yearBounds.end);
+
+  const thisRaw = amountIn(thisMap, currency);
+  const lastRaw = amountIn(lastMap, currency);
+  const change = momChangePercent(thisRaw, lastRaw);
+
+  const q = Math.floor(now.getUTCMonth() / 3) + 1;
+  const quarterLabel = `Q${q} ${now.getUTCFullYear()} · Now`;
+  const yearLabel = `${now.getUTCFullYear()} · Now`;
+
+  const activeAccountCount = accountRows.filter((a) => a.phase === 'ACTIVE').length;
+  const statusCounts = countWithdrawalsByStatus(withdrawalRows.map((r) => r.withdrawal));
+
+  // Largest withdrawal detail
+  let largestFirm: string | null = null;
+  let largestDate: string | null = null;
+  let largestAmount = Money.fromString('0', currency);
+  for (const row of withdrawalRows) {
+    if (!isRecognizedPayout(row.withdrawal) || row.withdrawal.currency !== currency) continue;
+    const money = Money.fromString(row.withdrawal.amount, row.withdrawal.currency);
+    if (money.amount.greaterThan(largestAmount.amount)) {
+      largestAmount = money;
+      largestFirm = row.firmName;
+      largestDate = row.withdrawal.receivedAt
+        ? row.withdrawal.receivedAt.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'UTC',
+          })
+        : null;
+    }
   }
 
-  const currentCapital = sumCurrentFundedCapitalByCurrency(sizeRows);
-  const lifetime = sumRecognizedByCurrency(records);
+  const best = bestMonthByCurrency(records)[currency];
+  const bestMonthDisplay = best ? formatDisplayMoney(best.amount, currency) : '—';
+  const bestMonthHelper = best
+    ? new Date(`${best.month}-01T00:00:00.000Z`).toLocaleString('en-US', {
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+    : '—';
 
+  // Tenure from earliest account start or earliest receivedAt
+  let tenureStart: Date | null = null;
+  for (const a of accountRows) {
+    if (!a.startDate) continue;
+    const d = new Date(`${a.startDate}T00:00:00.000Z`);
+    if (!Number.isNaN(d.getTime()) && (!tenureStart || d < tenureStart)) tenureStart = d;
+  }
+  for (const r of records) {
+    if (!r.receivedAt) continue;
+    if (!tenureStart || r.receivedAt < tenureStart) tenureStart = r.receivedAt;
+  }
+  let businessTenure = '—';
+  let businessTenureHelper = '—';
+  if (tenureStart) {
+    const months =
+      (now.getUTCFullYear() - tenureStart.getUTCFullYear()) * 12 +
+      (now.getUTCMonth() - tenureStart.getUTCMonth()) +
+      1;
+    businessTenure = `${Math.max(months, 1)} mo`;
+    businessTenureHelper = `Since ${tenureStart.toLocaleString('en-US', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })}`;
+  }
+
+  // Monthly series (last 12 months)
+  const monthlyBuckets: Record<string, { amount: Money; count: number }> = {};
+  for (let i = 11; i >= 0; i -= 1) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    monthlyBuckets[monthKey(d)] = {
+      amount: Money.fromString('0', currency),
+      count: 0,
+    };
+  }
+  for (const row of records) {
+    if (!isRecognizedPayout(row) || !row.receivedAt || row.currency !== currency) continue;
+    const key = monthKey(row.receivedAt);
+    const bucket = monthlyBuckets[key];
+    if (!bucket) continue;
+    bucket.amount = bucket.amount.add(Money.fromString(row.amount, row.currency));
+    bucket.count += 1;
+  }
+  const monthlyPayoutsChrono = Object.entries(monthlyBuckets).map(([key, bucket]) => ({
+    key,
+    label: monthLabel(key),
+    shortLabel: shortMonth(key),
+    amount: formatDisplayMoney(bucket.amount.toString(), currency),
+    amountRaw: Number(bucket.amount.toString()),
+    count: bucket.count,
+  }));
+
+  let running = Money.fromString('0', currency);
+  const cumulativeIncome = monthlyPayoutsChrono.map((m) => {
+    running = running.add(Money.fromString(String(m.amountRaw), currency));
+    return { key: m.key, label: m.shortLabel, amountRaw: Number(running.toString()) };
+  });
+
+  // Income by firm
+  const byFirm = sumRecognizedByKey(
+    withdrawalRows.map((r) => ({
+      ...toRecord(r.withdrawal),
+      key: r.firmName,
+    })),
+  );
+  const lifetimeAmt = Money.fromString(amountIn(lifetime, currency), currency);
+  const incomeByFirm = Object.entries(byFirm)
+    .map(([name, amounts]) => {
+      const raw = amounts[currency] ?? '0';
+      const money = Money.fromString(raw, currency);
+      const percent = lifetimeAmt.amount.isZero()
+        ? 0
+        : Number(money.amount.div(lifetimeAmt.amount).times(100).toFixed(0));
+      return {
+        name,
+        amount: formatDisplayMoney(raw, currency),
+        percent,
+        sort: money.amount,
+      };
+    })
+    .sort((a, b) => (b.sort.greaterThan(a.sort) ? 1 : -1))
+    .map(({ name, amount, percent }) => ({ name, amount, percent }));
+
+  // Broker metrics
   const latestByAccount = new Map<string, { equity: string; currency: string }>();
   for (const snap of snapshotRows) {
     if (!latestByAccount.has(snap.brokerAccountId)) {
@@ -202,87 +439,194 @@ export async function getDashboardSnapshot(
     }
   }
 
-  const brokerEquityTotals: Record<string, Money> = {};
-  const brokerPnlTotals: Record<string, Money> = {};
+  let totalDeposits = Money.fromString('0', currency);
+  let totalBrokerWd = Money.fromString('0', currency);
+  let totalEquity = Money.fromString('0', currency);
+  let totalPnl = Money.fromString('0', currency);
+  const peakCandidates: Array<{
+    id: string;
+    equity: string;
+    snapshotDate: Date;
+    currency: string;
+  }> = [];
+
+  const profitByBrokerMap: Record<string, Money> = {};
+  const profitByAccountList: Array<{ name: string; amount: string; amountRaw: number }> = [];
+
+  const brokerNameById = Object.fromEntries(brokerRows.map((b) => [b.id, b.name]));
+
   for (const account of brokerAccountRows) {
+    if (account.currency !== currency) continue;
     const latest = latestByAccount.get(account.id);
-    if (latest) {
-      const equity = Money.fromString(latest.equity, latest.currency);
-      brokerEquityTotals[equity.currency] = brokerEquityTotals[equity.currency]
-        ? brokerEquityTotals[equity.currency]!.add(equity)
-        : equity;
+    const deposits = depositRows.filter((d) => d.brokerAccountId === account.id);
+    const wds = brokerWdRows.filter((w) => w.brokerAccountId === account.id);
+    for (const d of deposits) {
+      if (d.currency === currency) {
+        totalDeposits = totalDeposits.add(Money.fromString(d.amount, d.currency));
+      }
+    }
+    for (const w of wds) {
+      if (w.currency === currency) {
+        totalBrokerWd = totalBrokerWd.add(Money.fromString(w.amount, w.currency));
+      }
+    }
+    if (latest && latest.currency === currency) {
+      totalEquity = totalEquity.add(Money.fromString(latest.equity, latest.currency));
     }
     const pnl = brokerNetProfitLoss({
       currency: account.currency,
       latestEquity: latest?.equity ?? null,
-      deposits: depositRows
-        .filter((d) => d.brokerAccountId === account.id)
-        .map((d) => ({ amount: d.amount, currency: d.currency })),
-      withdrawals: brokerWdRows
-        .filter((w) => w.brokerAccountId === account.id)
-        .map((w) => ({ amount: w.amount, currency: w.currency })),
+      deposits: deposits.map((d) => ({ amount: d.amount, currency: d.currency })),
+      withdrawals: wds.map((w) => ({ amount: w.amount, currency: w.currency })),
     });
     if (pnl !== 'N/A') {
       const money = Money.fromString(pnl, account.currency);
-      brokerPnlTotals[money.currency] = brokerPnlTotals[money.currency]
-        ? brokerPnlTotals[money.currency]!.add(money)
+      totalPnl = totalPnl.add(money);
+      const bName = brokerNameById[account.brokerId] ?? 'Broker';
+      profitByBrokerMap[bName] = profitByBrokerMap[bName]
+        ? profitByBrokerMap[bName]!.add(money)
         : money;
+      profitByAccountList.push({
+        name: account.accountName,
+        amount: formatDisplayMoney(pnl, account.currency, { signed: true }),
+        amountRaw: Number(money.toString()),
+      });
+    }
+    for (const snap of snapshotRows.filter((s) => s.brokerAccountId === account.id)) {
+      peakCandidates.push({
+        id: snap.id,
+        equity: snap.equity,
+        snapshotDate: snap.snapshotDate,
+        currency: snap.currency,
+      });
     }
   }
 
-  const brokerEquityMap = Object.fromEntries(
-    Object.entries(brokerEquityTotals).map(([c, m]) => [c, m.toString()]),
-  );
-  const brokerPnlMap = Object.fromEntries(
-    Object.entries(brokerPnlTotals).map(([c, m]) => [c, m.toString()]),
-  );
+  const peak = peakEquity(peakCandidates.filter((p) => p.currency === currency));
+  const latestEquityStr = totalEquity.amount.isZero() ? null : totalEquity.toString();
+  const drawdown = equityDrawdownPercent({
+    peakEquity: peak?.equity ?? null,
+    latestEquity: latestEquityStr,
+    currency,
+  });
 
-  const combinedCapital = combineSameCurrencyMaps(currentCapital, brokerEquityMap);
-  const combinedProfit = combineSameCurrencyMaps(lifetime, brokerPnlMap);
+  const roi = brokerRoi({
+    currency,
+    latestEquity: latestEquityStr,
+    deposits: depositRows
+      .filter((d) => d.currency === currency)
+      .map((d) => ({ amount: d.amount, currency: d.currency })),
+    withdrawals: brokerWdRows
+      .filter((w) => w.currency === currency)
+      .map((w) => ({ amount: w.amount, currency: w.currency })),
+  });
 
-  const best = bestMonthByCurrency(records);
-  const bestMonthLabel =
-    Object.entries(best)
-      .map(([c, v]) => `${v.month}: ${formatDisplayMoney(v.amount, c)}`)
-      .join(' · ') || '—';
+  const currentCapital = sumCurrentFundedCapitalByCurrency(sizeRows);
+  const totalFunded = sumTotalFundedCapitalByCurrency(sizeRows);
+  const combinedCapital = combineSameCurrencyMaps(currentCapital, {
+    [currency]: totalEquity.toString(),
+  });
+  const combinedProfit = combineSameCurrencyMaps(lifetime, { [currency]: totalPnl.toString() });
+
+  const yieldMap = incomeYieldByCurrency(records, sizeRows);
+  const avgPayoutMap = averagePayoutByCurrency(records);
+  const avgMonthlyMap = averageMonthlyIncomeByCurrency(records, now);
+
+  const asOfLabel = now
+    .toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+    .toUpperCase();
 
   return {
+    asOfLabel,
+    firstName: null,
     metrics: {
-      thisMonthRecognized: formatMoneyMap(
-        sumRecognizedInRange(records, bounds.thisMonth.start, bounds.thisMonth.end),
-      ),
-      lastMonthRecognized: formatMoneyMap(
-        sumRecognizedInRange(records, bounds.lastMonth.start, bounds.lastMonth.end),
-      ),
-      lifetimeRecognized: formatMoneyMap(lifetime),
-      pendingAmount: formatMoneyMap(sumPendingByCurrency(records)),
-      totalFundedCapital: formatMoneyMap(sumTotalFundedCapitalByCurrency(sizeRows)),
+      totalFundedCapital: formatMoneyMap(totalFunded),
       currentFundedCapital: formatMoneyMap(currentCapital),
-      portfolioGrowth: formatPercentMap(portfolioGrowthByCurrency(sizeRows)),
-      averagePayout: formatMoneyMap(averagePayoutByCurrency(records)),
-      averageMonthly: formatMoneyMap(averageMonthlyIncomeByCurrency(records, now)),
-      incomeYield: formatPercentMap(incomeYieldByCurrency(records, sizeRows)),
-      largestWithdrawal: formatMoneyMap(largestRecognizedByCurrency(records)),
-      bestMonth: bestMonthLabel,
+      thisMonth: formatMoneyMap(thisMap),
+      thisMonthHelper: change ? `${change} vs last month` : 'No prior month baseline',
+      thisMonthChange: change,
+      lastMonth: formatMoneyMap(lastMap),
+      lastMonthHelper: `${countRecognizedInRange(records, monthBounds.lastMonth.start, monthBounds.lastMonth.end, currency)} withdrawals`,
+      quarterToDate: formatMoneyMap(quarterMap),
+      quarterHelper: `${countRecognizedInRange(records, quarterBounds.start, quarterBounds.end, currency)} payouts this quarter`,
+      quarterLabel,
+      yearToDate: formatMoneyMap(yearMap),
+      yearHelper: `${countRecognizedInRange(records, yearBounds.start, yearBounds.end, currency)} payouts this year`,
+      yearLabel,
+      lifetime: formatMoneyMap(lifetime),
+      lifetimeHelper: `${countRecognizedPayouts(records)} paid payouts`,
+      averageMonthly: formatMoneyMap(avgMonthlyMap),
+      incomeYield: formatPercentMap(yieldMap).replace(` (${currency})`, ''),
+      averagePayout: formatMoneyMap(avgPayoutMap),
+      largestWithdrawal: largestAmount.amount.isZero()
+        ? '—'
+        : formatDisplayMoney(largestAmount.toString(), currency),
+      largestWithdrawalFirm: largestFirm,
+      largestWithdrawalDate: largestDate,
+      bestMonth: bestMonthDisplay,
+      bestMonthHelper,
+      businessTenure,
+      businessTenureHelper,
       recognizedPayoutCount: countRecognizedPayouts(records),
-      activeAccountCount: phaseDistribution.ACTIVE,
+      activeAccountCount,
       totalAccountCount: accountRows.length,
-      firmCount: new Set(accountRows.map((a) => a.firmId)).size,
-      paidWithdrawalCount: countWithdrawalsByStatus(withdrawalRows).PAID,
+      firmCount: firmRows.length,
+      certificateCount: certCountRows[0]?.value ?? 0,
+      paidWithdrawalCount: statusCounts.PAID,
+      brokerCount: brokerRows.length,
+      brokerAccountCount: brokerAccountRows.length,
+      currentRealEquity: formatDisplayMoney(totalEquity.toString(), currency),
+      brokerNetPl: formatDisplayMoney(totalPnl.toString(), currency, { signed: true }),
+      brokerRoi: roi === 'N/A' ? 'N/A' : formatDisplayPercent(roi),
+      totalDeposits: formatDisplayMoney(totalDeposits.toString(), currency),
+      totalBrokerWithdrawals: formatDisplayMoney(totalBrokerWd.toString(), currency),
+      peakEquity: peak ? formatDisplayMoney(peak.equity, currency) : '—',
+      tradingDrawdown:
+        drawdown === 'N/A'
+          ? 'N/A'
+          : formatDisplayMoney(
+              Money.fromString(peak?.equity ?? '0', currency)
+                .amount.minus(Money.fromString(latestEquityStr ?? '0', currency).amount)
+                .toFixed(2),
+              currency,
+            ),
       combinedManagedCapital: combinedCapital
         ? formatDisplayMoney(combinedCapital.amount, combinedCapital.currency)
         : '—',
       combinedGeneratedProfit: combinedProfit
-        ? formatDisplayMoney(combinedProfit.amount, combinedProfit.currency)
+        ? formatDisplayMoney(combinedProfit.amount, combinedProfit.currency, { signed: true })
         : '—',
+      fundedCapitalRaw: formatMoneyMap(currentCapital),
+      realEquityRaw: formatDisplayMoney(totalEquity.toString(), currency),
+      fundedPayoutsRaw: formatMoneyMap(lifetime),
+      realPlRaw: formatDisplayMoney(totalPnl.toString(), currency, { signed: true }),
     },
-    withdrawalStatusDistribution: countWithdrawalsByStatus(withdrawalRows),
-    phaseDistribution,
+    incomeByFirm,
+    monthlyPayouts: [...monthlyPayoutsChrono]
+      .reverse()
+      .filter((m) => m.count > 0)
+      .slice(0, 6),
+    payoutTrend: monthlyPayoutsChrono,
+    cumulativeIncome,
+    profitByBroker: Object.entries(profitByBrokerMap)
+      .map(([name, money]) => ({
+        name,
+        amount: formatDisplayMoney(money.toString(), currency, { signed: true }),
+        amountRaw: Number(money.toString()),
+      }))
+      .sort((a, b) => b.amountRaw - a.amountRaw),
+    profitByAccount: profitByAccountList.sort((a, b) => b.amountRaw - a.amountRaw),
     recentWithdrawals: recentWd.map((row) => ({
       id: row.withdrawal.id,
       amount: row.withdrawal.amount,
       currency: row.withdrawal.currency,
       status: row.withdrawal.status,
+      firmName: row.firmName,
       requestedAt: row.withdrawal.requestedAt,
       receivedAt: row.withdrawal.receivedAt,
       accountLabel: accountDisplayName({
@@ -291,17 +635,15 @@ export async function getDashboardSnapshot(
         firmName: row.firmName,
       }),
     })),
-    recentScaleEvents: recentScale.map((row) => ({
-      id: row.scaleEvent.id,
-      fromSize: row.scaleEvent.fromSize,
-      toSize: row.scaleEvent.toSize,
-      currency: row.currency,
-      scaledAt: row.scaleEvent.scaledAt,
-      accountLabel: accountDisplayName({
-        label: row.accountLabel,
-        accountNumber: row.accountNumber,
-        firmName: row.firmName,
-      }),
-    })),
   };
+}
+
+function formatPercentMap(map: Record<string, string>): string {
+  const entries = Object.entries(map);
+  if (entries.length === 0) return '—';
+  return entries
+    .map(([currency, value]) =>
+      value === 'N/A' ? `N/A (${currency})` : `${formatDisplayPercent(value)} (${currency})`,
+    )
+    .join(' · ');
 }
