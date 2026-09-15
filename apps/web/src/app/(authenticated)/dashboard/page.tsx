@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { Badge, Card, EmptyState, MetricCard } from '@fpm/ui';
 import { formatDisplayMoney } from '@fpm/money';
@@ -21,53 +22,80 @@ function formatShortDate(value: Date | null) {
   });
 }
 
+function Icon({ d, paths }: { d?: string; paths?: string[] }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden
+    >
+      {d ? <path d={d} strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {paths?.map((p) => (
+        <path key={p} d={p} strokeLinecap="round" strokeLinejoin="round" />
+      ))}
+    </svg>
+  );
+}
+
+function PeriodNav() {
+  return (
+    <div className="fpm-metric-card__nav" aria-hidden>
+      <span>‹</span>
+      <span>›</span>
+    </div>
+  );
+}
+
 function AreaChart({ points }: { points: Array<{ label: string; amountRaw: number }> }) {
-  const width = 640;
-  const height = 180;
-  const padX = 12;
-  const padY = 16;
+  const width = 720;
+  const height = 200;
+  const padL = 8;
+  const padR = 48;
+  const padT = 12;
+  const padB = 28;
   const max = Math.max(...points.map((p) => p.amountRaw), 1);
   const coords = points.map((p, i) => {
-    const x = padX + (i / Math.max(points.length - 1, 1)) * (width - padX * 2);
-    const y = height - padY - (p.amountRaw / max) * (height - padY * 2);
-    return `${x},${y}`;
+    const x = padL + (i / Math.max(points.length - 1, 1)) * (width - padL - padR);
+    const y = padT + (1 - p.amountRaw / max) * (height - padT - padB);
+    return { x, y, label: p.label };
   });
-  const line = coords.join(' ');
-  const area = `${padX},${height - padY} ${line} ${width - padX},${height - padY}`;
-  const yTop = max >= 1000 ? `$${Math.round(max / 1000)}K` : `$${Math.round(max)}`;
-  const yMid = max >= 1000 ? `$${Math.round(max / 2000)}K` : `$${Math.round(max / 2)}`;
+  const line = coords.map((c) => `${c.x},${c.y}`).join(' ');
+  const area = `${padL},${height - padB} ${line} ${coords[coords.length - 1]?.x ?? padL},${height - padB}`;
+  const yTicks = [1, 0.66, 0.33].map((f) => {
+    const v = max * f;
+    return v >= 1000 ? `$${Math.round(v / 1000)}K` : `$${Math.round(v)}`;
+  });
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div
-        style={{
-          position: 'absolute',
-          right: 8,
-          top: 0,
-          fontSize: 11,
-          color: 'var(--fpm-text-muted)',
-        }}
-      >
-        {yTop}
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          right: 8,
-          top: '45%',
-          fontSize: 11,
-          color: 'var(--fpm-text-muted)',
-        }}
-      >
-        {yMid}
-      </div>
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="180" role="img">
+    <div>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="200" role="img">
         <defs>
           <linearGradient id="fpmIncomeFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.35" />
+            <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.32" />
             <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.02" />
           </linearGradient>
         </defs>
+        {yTicks.map((label, i) => {
+          const y = padT + (i / (yTicks.length - 1 || 1)) * (height - padT - padB);
+          return (
+            <g key={label}>
+              <line
+                x1={padL}
+                x2={width - padR}
+                y1={y}
+                y2={y}
+                stroke="color-mix(in srgb, #0f172a 6%, transparent)"
+              />
+              <text x={width - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#94a3b8">
+                {label}
+              </text>
+            </g>
+          );
+        })}
         <polygon points={area} fill="url(#fpmIncomeFill)" />
         <polyline
           points={line}
@@ -79,12 +107,26 @@ function AreaChart({ points }: { points: Array<{ label: string; amountRaw: numbe
         />
         {coords.length > 0 ? (
           <circle
-            cx={Number(coords[coords.length - 1]!.split(',')[0])}
-            cy={Number(coords[coords.length - 1]!.split(',')[1])}
+            cx={coords[coords.length - 1]!.x}
+            cy={coords[coords.length - 1]!.y}
             r="5"
             fill="#0d9488"
           />
         ) : null}
+        {coords.map((c, i) =>
+          i % 2 === 0 || i === coords.length - 1 ? (
+            <text
+              key={c.label + i}
+              x={c.x}
+              y={height - 6}
+              textAnchor="middle"
+              fontSize="11"
+              fill="#94a3b8"
+            >
+              {c.label}
+            </text>
+          ) : null,
+        )}
       </svg>
     </div>
   );
@@ -97,16 +139,16 @@ function BarChart({ points }: { points: Array<{ shortLabel: string; amountRaw: n
       style={{
         display: 'flex',
         alignItems: 'flex-end',
-        gap: 8,
-        height: 180,
+        gap: 6,
+        height: 190,
         paddingTop: 8,
       }}
     >
-      {points.map((p) => {
-        const h = Math.max(8, (p.amountRaw / max) * 140);
+      {points.map((p, i) => {
+        const h = p.amountRaw <= 0 ? 4 : Math.max(10, (p.amountRaw / max) * 150);
         return (
           <div
-            key={p.shortLabel + p.amountRaw}
+            key={`${p.shortLabel}-${i}`}
             style={{
               flex: 1,
               display: 'flex',
@@ -119,10 +161,10 @@ function BarChart({ points }: { points: Array<{ shortLabel: string; amountRaw: n
               title={`${p.shortLabel}: ${p.amountRaw}`}
               style={{
                 width: '100%',
-                maxWidth: 28,
+                maxWidth: 26,
                 height: h,
                 borderRadius: '8px 8px 4px 4px',
-                background: 'linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%)',
+                background: 'linear-gradient(180deg, #c4b5fd 0%, #8b5cf6 100%)',
               }}
             />
             <span style={{ fontSize: 11, color: 'var(--fpm-text-muted)' }}>{p.shortLabel}</span>
@@ -184,6 +226,60 @@ function ProgressRow({
   );
 }
 
+function SnapshotStat({
+  label,
+  value,
+  helper,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+  icon: ReactNode;
+  color: string;
+}) {
+  return (
+    <div
+      style={{
+        background: '#fff',
+        borderRadius: 14,
+        padding: '14px 12px',
+        boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          display: 'grid',
+          placeItems: 'center',
+          background: color,
+          marginBottom: 10,
+          color: '#0f172a',
+        }}
+      >
+        {icon}
+      </div>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          color: 'var(--fpm-text-muted)',
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 750, letterSpacing: '-0.02em' }}>{value}</div>
+      <div style={{ marginTop: 4, fontSize: 12, color: 'var(--fpm-text-muted)' }}>{helper}</div>
+    </div>
+  );
+}
+
 export default async function DashboardPage() {
   const [session, result] = await Promise.all([getSessionAction(), getDashboardAction()]);
   if (!result.ok) {
@@ -200,9 +296,13 @@ export default async function DashboardPage() {
         ? session.user.email.split('@')[0]
         : 'trader';
 
+  const momBadge =
+    m.thisMonthChange && m.thisMonthChange !== '0%'
+      ? m.thisMonthChange.replace('+', '').replace('-', '↓ ')
+      : null;
+
   return (
     <div style={{ display: 'grid', gap: 28 }}>
-      {/* Hero */}
       <Card
         style={{
           background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%)',
@@ -318,7 +418,6 @@ export default async function DashboardPage() {
         </div>
       </Card>
 
-      {/* Funded business KPIs */}
       <section>
         <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 750 }}>Funded Business</h2>
         <p style={{ margin: '0 0 14px', color: 'var(--fpm-text-muted)', fontSize: 14 }}>
@@ -335,37 +434,55 @@ export default async function DashboardPage() {
             label="This month"
             value={m.thisMonth}
             helper={m.thisMonthHelper}
+            helperTone={m.thisMonthChange?.startsWith('-') ? 'danger' : 'muted'}
             tone="yellow"
+            icon={
+              <Icon d="M8 2v3M16 2v3M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+            }
+            badge={
+              momBadge ? <span className="fpm-metric-card__badge">{momBadge}</span> : undefined
+            }
           />
           <MetricCard
             label="Last month"
             value={m.lastMonth}
             helper={m.lastMonthHelper}
             tone="orange"
+            icon={<Icon d="M12 2v20M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />}
           />
           <MetricCard
             label={m.quarterLabel}
             value={m.quarterToDate}
             helper={m.quarterHelper}
             tone="green"
+            icon={<Icon paths={['M4 20V10', 'M10 20V4', 'M16 20v-8', 'M22 20V12']} />}
+            headerRight={<PeriodNav />}
           />
-          <MetricCard label={m.yearLabel} value={m.yearToDate} helper={m.yearHelper} tone="teal" />
+          <MetricCard
+            label={m.yearLabel}
+            value={m.yearToDate}
+            helper={m.yearHelper}
+            tone="teal"
+            icon={<Icon paths={['M3 17 9 11l4 4 8-8', 'M14 7h7v7']} />}
+            headerRight={<PeriodNav />}
+          />
           <MetricCard
             label="Lifetime income"
             value={m.lifetime}
             helper={m.lifetimeHelper}
             tone="purple"
+            icon={<Icon paths={['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', 'M12 7v10M9 10h6']} />}
           />
           <MetricCard
             label="Avg / month"
             value={m.averageMonthly}
             helper="Running average"
             tone="pink"
+            icon={<Icon paths={['M4 19h16', 'M7 16V9', 'M12 16V5', 'M17 16v-4']} />}
           />
         </div>
       </section>
 
-      {/* Business snapshot */}
       <Card style={{ background: 'color-mix(in srgb, #dbeafe 45%, #fff)' }}>
         <div
           style={{
@@ -397,49 +514,47 @@ export default async function DashboardPage() {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: 18,
+            gap: 12,
           }}
         >
-          {[
-            { label: 'Income yield', value: m.incomeYield, helper: 'Return on funded capital' },
-            {
-              label: 'Avg payout size',
-              value: m.averagePayout,
-              helper: `Across ${m.recognizedPayoutCount} payouts`,
-            },
-            { label: 'Business tenure', value: m.businessTenure, helper: m.businessTenureHelper },
-            {
-              label: 'Largest withdrawal',
-              value: m.largestWithdrawal,
-              helper: m.largestWithdrawalFirm ?? '—',
-            },
-            { label: 'Best month', value: m.bestMonth, helper: m.bestMonthHelper },
-          ].map((item) => (
-            <div key={item.label}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  color: 'var(--fpm-text-muted)',
-                  marginBottom: 6,
-                }}
-              >
-                {item.label}
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 750, letterSpacing: '-0.02em' }}>
-                {item.value}
-              </div>
-              <div style={{ marginTop: 4, fontSize: 12, color: 'var(--fpm-text-muted)' }}>
-                {item.helper}
-              </div>
-            </div>
-          ))}
+          <SnapshotStat
+            label="Income yield"
+            value={m.incomeYield}
+            helper="Return on funded capital"
+            color="#dbeafe"
+            icon={<Icon paths={['M4 20V10', 'M10 20V4', 'M16 20v-8']} />}
+          />
+          <SnapshotStat
+            label="Avg payout size"
+            value={m.averagePayout}
+            helper={`Across ${m.recognizedPayoutCount} payouts`}
+            color="#dcfce7"
+            icon={<Icon paths={['M4 19h16', 'M7 16V9', 'M12 16V5', 'M17 16v-4']} />}
+          />
+          <SnapshotStat
+            label="Business tenure"
+            value={m.businessTenure}
+            helper={m.businessTenureHelper}
+            color="#e0f2fe"
+            icon={<Icon paths={['M12 7v5l3 2', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z']} />}
+          />
+          <SnapshotStat
+            label="Largest withdrawal"
+            value={m.largestWithdrawal}
+            helper={m.largestWithdrawalFirm ?? '—'}
+            color="#fef3c7"
+            icon={<Icon d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" />}
+          />
+          <SnapshotStat
+            label="Best month"
+            value={m.bestMonth}
+            helper={m.bestMonthHelper}
+            color="#ede9fe"
+            icon={<Icon paths={['M3 17 9 11l4 4 8-8', 'M14 7h7v7']} />}
+          />
         </div>
       </Card>
 
-      {/* Lifetime income growth */}
       <Card style={{ background: 'color-mix(in srgb, #ccfbf1 40%, #fff)' }}>
         <div
           style={{
@@ -468,13 +583,12 @@ export default async function DashboardPage() {
             >
               Current lifetime income
             </div>
-            <div style={{ fontSize: 28, fontWeight: 750 }}>{m.lifetime}</div>
+            <div style={{ fontSize: 28, fontWeight: 750, color: '#0f766e' }}>{m.lifetime}</div>
           </div>
         </div>
         <AreaChart points={snapshot.cumulativeIncome} />
       </Card>
 
-      {/* Payout trend + Income by firm */}
       <div
         style={{
           display: 'grid',
@@ -557,7 +671,6 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent withdrawals + Monthly payouts */}
       <div
         style={{
           display: 'grid',
@@ -607,22 +720,35 @@ export default async function DashboardPage() {
                         : 'transparent',
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 650 }}>{row.firmName}</div>
-                    <div
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span
+                      aria-hidden
                       style={{
-                        display: 'flex',
-                        gap: 8,
-                        alignItems: 'center',
-                        marginTop: 4,
-                        fontSize: 12,
-                        color: 'var(--fpm-text-muted)',
+                        width: 8,
+                        height: 8,
+                        borderRadius: 999,
+                        marginTop: 6,
+                        background: row.status === 'PAID' ? '#16a34a' : '#94a3b8',
+                        flexShrink: 0,
                       }}
-                    >
-                      <Badge tone={statusTone(row.status)}>
-                        {row.status === 'PAID' ? 'Paid' : row.status}
-                      </Badge>
-                      <span>{formatShortDate(row.receivedAt ?? row.requestedAt)}</span>
+                    />
+                    <div>
+                      <div style={{ fontWeight: 650 }}>{row.firmName}</div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 8,
+                          alignItems: 'center',
+                          marginTop: 4,
+                          fontSize: 12,
+                          color: 'var(--fpm-text-muted)',
+                        }}
+                      >
+                        <Badge tone={statusTone(row.status)}>
+                          {row.status === 'PAID' ? 'Paid' : row.status}
+                        </Badge>
+                        <span>{formatShortDate(row.receivedAt ?? row.requestedAt)}</span>
+                      </div>
                     </div>
                   </div>
                   <div style={{ fontWeight: 750, fontVariantNumeric: 'tabular-nums' }}>
@@ -664,10 +790,23 @@ export default async function DashboardPage() {
                         : 'transparent',
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 650 }}>{row.label}</div>
-                    <div style={{ marginTop: 4, fontSize: 12, color: 'var(--fpm-text-muted)' }}>
-                      {row.count} payout{row.count === 1 ? '' : 's'}
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 999,
+                        marginTop: 6,
+                        background: '#2563eb',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 650 }}>{row.label}</div>
+                      <div style={{ marginTop: 4, fontSize: 12, color: 'var(--fpm-text-muted)' }}>
+                        {row.count} payout{row.count === 1 ? '' : 's'}
+                      </div>
                     </div>
                   </div>
                   <div style={{ fontWeight: 750 }}>{row.amount}</div>
@@ -678,7 +817,6 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Real accounts */}
       <section>
         <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 750 }}>Real Accounts</h2>
         <p style={{ margin: '0 0 14px', color: 'var(--fpm-text-muted)', fontSize: 14 }}>
@@ -726,7 +864,8 @@ export default async function DashboardPage() {
                 }}
               >
                 <span>
-                  · {m.brokerAccountCount} Broker Account{m.brokerAccountCount === 1 ? '' : 's'}
+                  · {m.brokerAccountCount} Broker Account
+                  {m.brokerAccountCount === 1 ? '' : 's'}
                 </span>
                 <span>
                   · {m.brokerCount} Broker{m.brokerCount === 1 ? '' : 's'}
@@ -756,7 +895,7 @@ export default async function DashboardPage() {
                 {m.brokerNetPl}
               </div>
               <div style={{ fontSize: 13, color: 'var(--fpm-text-muted)', marginTop: 4 }}>
-                ROI: {m.brokerRoi}
+                ROI: {m.brokerRoiHero}
               </div>
             </div>
           </div>
@@ -770,19 +909,35 @@ export default async function DashboardPage() {
             marginBottom: 14,
           }}
         >
-          <MetricCard label="Current equity" value={m.currentRealEquity} tone="purple" />
-          <MetricCard label="Net P/L" value={m.brokerNetPl} tone="teal" />
-          <MetricCard label="ROI" value={m.brokerRoi} tone="neutral" />
-          <MetricCard label="Total deposits" value={m.totalDeposits} tone="yellow" />
-          <MetricCard label="Total withdrawals" value={m.totalBrokerWithdrawals} tone="pink" />
-          <MetricCard label="Peak equity" value={m.peakEquity} tone="purple" />
+          <MetricCard
+            label="Current equity"
+            value={m.currentRealEquity}
+            tone="purple"
+            accentValue
+          />
+          <MetricCard label="Net P/L" value={m.brokerNetPl} tone="green" accentValue />
+          <MetricCard label="ROI" value={m.brokerRoi} tone="teal" accentValue />
+          <MetricCard label="Total deposits" value={m.totalDeposits} tone="orange" accentValue />
+          <MetricCard
+            label="Total withdrawals"
+            value={m.totalBrokerWithdrawals}
+            tone="pink"
+            accentValue
+          />
+          <MetricCard label="Peak equity" value={m.peakEquity} tone="purple" accentValue />
           <MetricCard
             label="Trading drawdown"
             value={m.tradingDrawdown}
             helper="excl. withdrawals"
             tone="teal"
+            accentValue
           />
-          <MetricCard label="Accounts" value={String(m.brokerAccountCount)} tone="orange" />
+          <MetricCard
+            label="Accounts"
+            value={String(m.brokerAccountCount)}
+            tone="orange"
+            accentValue
+          />
         </div>
 
         <div
@@ -793,13 +948,7 @@ export default async function DashboardPage() {
           }}
         >
           <Card style={{ background: 'color-mix(in srgb, #dcfce7 45%, #fff)' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: 16 }}>Profit by Broker</h3>
               <Link href="/broker-accounts" style={{ fontSize: 13, color: 'var(--fpm-primary)' }}>
                 View all →
@@ -826,13 +975,7 @@ export default async function DashboardPage() {
             )}
           </Card>
           <Card style={{ background: 'color-mix(in srgb, #ede9fe 50%, #fff)' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: 16 }}>Profit by Account</h3>
               <Link href="/broker-accounts" style={{ fontSize: 13, color: 'var(--fpm-primary)' }}>
                 View all →
@@ -861,7 +1004,6 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Combined overview */}
       <section>
         <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 750 }}>
           Combined Business Overview
@@ -938,17 +1080,11 @@ export default async function DashboardPage() {
             >
               Account summary
             </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 8,
-              }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {[
                 {
                   label: 'Funded accts',
-                  value: m.totalAccountCount,
+                  value: m.activeAccountCount,
                   tone: 'var(--fpm-metric-green)',
                 },
                 {

@@ -530,6 +530,26 @@ export function equityDrawdownPercent(input: {
 }
 
 /**
+ * Reference dashboard "Trading drawdown · excl. withdrawals":
+ * `max(0, peak − (latestEquity + SUM(broker withdrawals)))` as a money amount.
+ * Cash removed via withdrawal does not count as trading drawdown.
+ */
+export function equityDrawdownAmountExclWithdrawals(input: {
+  peakEquity: string | null;
+  latestEquity: string | null;
+  withdrawalsTotal: string;
+  currency: string;
+}): string {
+  if (input.peakEquity == null || input.latestEquity == null) return 'N/A';
+  const peak = Money.fromString(input.peakEquity, input.currency);
+  if (peak.amount.isZero()) return 'N/A';
+  const latest = Money.fromString(input.latestEquity, input.currency);
+  const withdrawn = Money.fromString(input.withdrawalsTotal, input.currency);
+  const amount = peak.amount.minus(latest.amount.plus(withdrawn.amount));
+  return (amount.lessThan(0) ? Money.fromString('0', input.currency).amount : amount).toFixed(2);
+}
+
+/**
  * ADR-014 / OQ-012: combine same-currency maps only.
  * Returns null when currencies are mixed or empty.
  */

@@ -6,6 +6,7 @@ import {
   brokerRoi,
   combineSameCurrencyMaps,
   equityDrawdownPercent,
+  equityDrawdownAmountExclWithdrawals,
   inclusiveUtcMonthCount,
   peakEquity,
   portfolioGrowthByCurrency,
@@ -89,6 +90,22 @@ describe('ADR-014 broker and drawdown', () => {
     expect(equityDrawdownPercent({ peakEquity: '150', latestEquity: '120', currency: 'USD' })).toBe(
       '20.00%',
     );
+    expect(
+      equityDrawdownAmountExclWithdrawals({
+        peakEquity: '8644',
+        latestEquity: '8000',
+        withdrawalsTotal: '644',
+        currency: 'USD',
+      }),
+    ).toBe('0.00');
+    expect(
+      equityDrawdownAmountExclWithdrawals({
+        peakEquity: '1000',
+        latestEquity: '800',
+        withdrawalsTotal: '0',
+        currency: 'USD',
+      }),
+    ).toBe('200.00');
   });
 
   it('combines only same currency', () => {
