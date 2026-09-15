@@ -11,4 +11,6 @@ Currency:
 
 **[`docs/architecture/CURRENCY-POLICY.md`](../architecture/CURRENCY-POLICY.md)**
 
-Do not invent formulas marked UNRESOLVED in those documents.
+Metric pack decisions: [`docs/decisions/ADR-014-FINANCIAL-METRIC-PACK.md`](../decisions/ADR-014-FINANCIAL-METRIC-PACK.md).
+
+Do not invent formulas still marked deferred/unresolved in those documents.

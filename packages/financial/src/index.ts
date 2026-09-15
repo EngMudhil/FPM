@@ -296,3 +296,252 @@ export function formatReturnOrNA(numerator: string, denominator: string, currenc
   const pct = num.amount.div(denom.amount).times(100);
   return `${pct.toFixed(2)}%`;
 }
+
+export type AccountSizeRow = {
+  initialSize: string;
+  currentSize: string;
+  currency: string;
+};
+
+function sumSizeField(
+  rows: AccountSizeRow[],
+  field: 'initialSize' | 'currentSize',
+): Record<string, string> {
+  const totals: Record<string, Money> = {};
+  for (const row of rows) {
+    const money = Money.fromString(row[field], row.currency);
+    const existing = totals[money.currency];
+    totals[money.currency] = existing ? existing.add(money) : money;
+  }
+  return Object.fromEntries(
+    Object.entries(totals).map(([currency, money]) => [currency, money.toString()]),
+  );
+}
+
+/** ADR-014 / OQ-001: total funded capital = SUM(initialSize) per currency. */
+export function sumTotalFundedCapitalByCurrency(rows: AccountSizeRow[]): Record<string, string> {
+  return sumSizeField(rows, 'initialSize');
+}
+
+/** ADR-014 / OQ-001: current funded capital = SUM(currentSize) per currency. */
+export function sumCurrentFundedCapitalByCurrency(rows: AccountSizeRow[]): Record<string, string> {
+  return sumSizeField(rows, 'currentSize');
+}
+
+/** ADR-014: portfolio growth % per currency; N/A if initial = 0. */
+export function portfolioGrowthByCurrency(rows: AccountSizeRow[]): Record<string, string> {
+  const initial = sumTotalFundedCapitalByCurrency(rows);
+  const current = sumCurrentFundedCapitalByCurrency(rows);
+  const currencies = new Set([...Object.keys(initial), ...Object.keys(current)]);
+  const out: Record<string, string> = {};
+  for (const currency of currencies) {
+    const init = Money.fromString(initial[currency] ?? '0', currency);
+    if (init.amount.isZero()) {
+      out[currency] = 'N/A';
+      continue;
+    }
+    const cur = Money.fromString(current[currency] ?? '0', currency);
+    out[currency] = `${cur.amount.minus(init.amount).div(init.amount).times(100).toFixed(2)}%`;
+  }
+  return out;
+}
+
+/** Inclusive UTC month count from earliest receivedAt through `now` (OQ-017 / ADR-014). */
+export function inclusiveUtcMonthCount(
+  withdrawals: WithdrawalRecord[],
+  now: Date = new Date(),
+): number | null {
+  const recognized = withdrawals.filter(isRecognizedPayout);
+  if (recognized.length === 0) return null;
+  let earliest = recognized[0]!.receivedAt!;
+  for (const row of recognized) {
+    if (row.receivedAt!.getTime() < earliest.getTime()) earliest = row.receivedAt!;
+  }
+  const startY = earliest.getUTCFullYear();
+  const startM = earliest.getUTCMonth();
+  const endY = now.getUTCFullYear();
+  const endM = now.getUTCMonth();
+  return (endY - startY) * 12 + (endM - startM) + 1;
+}
+
+export function averagePayoutByCurrency(withdrawals: WithdrawalRecord[]): Record<string, string> {
+  const sums: Record<string, Money> = {};
+  const counts: Record<string, number> = {};
+  for (const row of withdrawals) {
+    if (!isRecognizedPayout(row)) continue;
+    const money = Money.fromString(row.amount, row.currency);
+    sums[money.currency] = sums[money.currency] ? sums[money.currency]!.add(money) : money;
+    counts[money.currency] = (counts[money.currency] ?? 0) + 1;
+  }
+  const out: Record<string, string> = {};
+  for (const [currency, money] of Object.entries(sums)) {
+    const n = counts[currency] ?? 0;
+    out[currency] = n === 0 ? 'N/A' : money.amount.div(n).toFixed();
+  }
+  return out;
+}
+
+export function averageMonthlyIncomeByCurrency(
+  withdrawals: WithdrawalRecord[],
+  now: Date = new Date(),
+): Record<string, string> {
+  const months = inclusiveUtcMonthCount(withdrawals, now);
+  const lifetime = sumRecognizedByCurrency(withdrawals);
+  if (months === null) {
+    return Object.fromEntries(Object.keys(lifetime).map((c) => [c, 'N/A']));
+  }
+  const out: Record<string, string> = {};
+  for (const [currency, amount] of Object.entries(lifetime)) {
+    out[currency] = Money.fromString(amount, currency).amount.div(months).toFixed();
+  }
+  return out;
+}
+
+export function incomeYieldByCurrency(
+  withdrawals: WithdrawalRecord[],
+  accounts: AccountSizeRow[],
+): Record<string, string> {
+  const income = sumRecognizedByCurrency(withdrawals);
+  const capital = sumCurrentFundedCapitalByCurrency(accounts);
+  const currencies = new Set([...Object.keys(income), ...Object.keys(capital)]);
+  const out: Record<string, string> = {};
+  for (const currency of currencies) {
+    const cap = Money.fromString(capital[currency] ?? '0', currency);
+    if (cap.amount.isZero()) {
+      out[currency] = 'N/A';
+      continue;
+    }
+    const inc = Money.fromString(income[currency] ?? '0', currency);
+    out[currency] = `${inc.amount.div(cap.amount).times(100).toFixed(2)}%`;
+  }
+  return out;
+}
+
+export function largestRecognizedByCurrency(
+  withdrawals: WithdrawalRecord[],
+): Record<string, string> {
+  const best: Record<string, Money> = {};
+  for (const row of withdrawals) {
+    if (!isRecognizedPayout(row)) continue;
+    const money = Money.fromString(row.amount, row.currency);
+    const existing = best[money.currency];
+    if (!existing || money.amount.greaterThan(existing.amount)) best[money.currency] = money;
+  }
+  return Object.fromEntries(
+    Object.entries(best).map(([currency, money]) => [currency, money.toString()]),
+  );
+}
+
+export function bestMonthByCurrency(
+  withdrawals: WithdrawalRecord[],
+): Record<string, { month: string; amount: string }> {
+  const buckets: Record<string, Record<string, Money>> = {};
+  for (const row of withdrawals) {
+    if (!isRecognizedPayout(row) || !row.receivedAt) continue;
+    const month = `${row.receivedAt.getUTCFullYear()}-${String(row.receivedAt.getUTCMonth() + 1).padStart(2, '0')}`;
+    const money = Money.fromString(row.amount, row.currency);
+    const byMonth = buckets[money.currency] ?? (buckets[money.currency] = {});
+    byMonth[month] = byMonth[month] ? byMonth[month]!.add(money) : money;
+  }
+  const out: Record<string, { month: string; amount: string }> = {};
+  for (const [currency, byMonth] of Object.entries(buckets)) {
+    let topMonth = '';
+    let topMoney: Money | null = null;
+    for (const [month, money] of Object.entries(byMonth)) {
+      if (!topMoney || money.amount.greaterThan(topMoney.amount)) {
+        topMoney = money;
+        topMonth = month;
+      }
+    }
+    if (topMoney) out[currency] = { month: topMonth, amount: topMoney.toString() };
+  }
+  return out;
+}
+
+/**
+ * ADR-014 / OQ-003: broker net P/L = latestEquity + withdrawals − deposits.
+ * N/A when latest equity missing.
+ */
+export function brokerNetProfitLoss(input: {
+  currency: string;
+  latestEquity: string | null;
+  deposits: BrokerCashflow[];
+  withdrawals: BrokerCashflow[];
+}): string {
+  if (input.latestEquity == null) return 'N/A';
+  const code = input.currency.trim().toUpperCase();
+  let deposits = Money.fromString('0', code);
+  let withdrawals = Money.fromString('0', code);
+  for (const row of input.deposits) {
+    deposits = deposits.add(Money.fromString(row.amount, row.currency));
+  }
+  for (const row of input.withdrawals) {
+    withdrawals = withdrawals.add(Money.fromString(row.amount, row.currency));
+  }
+  const equity = Money.fromString(input.latestEquity, code);
+  return equity.add(withdrawals).sub(deposits).toString();
+}
+
+export function brokerRoi(input: {
+  currency: string;
+  latestEquity: string | null;
+  deposits: BrokerCashflow[];
+  withdrawals: BrokerCashflow[];
+}): string {
+  const pnl = brokerNetProfitLoss(input);
+  if (pnl === 'N/A') return 'N/A';
+  const code = input.currency.trim().toUpperCase();
+  let deposits = Money.fromString('0', code);
+  for (const row of input.deposits) {
+    deposits = deposits.add(Money.fromString(row.amount, row.currency));
+  }
+  return formatReturnOrNA(pnl, deposits.toString(), code);
+}
+
+export type EquityPoint = { id: string; equity: string; snapshotDate: Date; currency: string };
+
+/** ADR-014 / OQ-005: peak equity among snapshots. */
+export function peakEquity(points: EquityPoint[]): { equity: string; currency: string } | null {
+  if (points.length === 0) return null;
+  const sorted = [...points].sort((a, b) => {
+    const byAmt = Money.fromString(b.equity, b.currency).amount.comparedTo(
+      Money.fromString(a.equity, a.currency).amount,
+    );
+    if (byAmt !== 0) return byAmt;
+    const byDate = b.snapshotDate.getTime() - a.snapshotDate.getTime();
+    if (byDate !== 0) return byDate;
+    return b.id.localeCompare(a.id);
+  });
+  const top = sorted[0]!;
+  return { equity: top.equity, currency: top.currency };
+}
+
+/** ADR-014 / OQ-004: drawdown from peak to latest. */
+export function equityDrawdownPercent(input: {
+  peakEquity: string | null;
+  latestEquity: string | null;
+  currency: string;
+}): string {
+  if (input.peakEquity == null || input.latestEquity == null) return 'N/A';
+  const peak = Money.fromString(input.peakEquity, input.currency);
+  if (peak.amount.isZero()) return 'N/A';
+  const latest = Money.fromString(input.latestEquity, input.currency);
+  return `${peak.amount.minus(latest.amount).div(peak.amount).times(100).toFixed(2)}%`;
+}
+
+/**
+ * ADR-014 / OQ-012: combine same-currency maps only.
+ * Returns null when currencies are mixed or empty.
+ */
+export function combineSameCurrencyMaps(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): { currency: string; amount: string } | null {
+  const currencies = new Set([...Object.keys(a), ...Object.keys(b)]);
+  if (currencies.size !== 1) return null;
+  const currency = [...currencies][0]!;
+  const total = Money.fromString(a[currency] ?? '0', currency).add(
+    Money.fromString(b[currency] ?? '0', currency),
+  );
+  return { currency, amount: total.toString() };
+}

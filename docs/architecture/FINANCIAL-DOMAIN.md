@@ -1,6 +1,6 @@
 # FINANCIAL-DOMAIN
 
-Status: Authoritative (FPM-002B).  
+Status: Authoritative (FPM-002B / FPM-021).  
 Owner: Financial Domain Agent.  
 Reviewers: Lead + QA.
 
@@ -45,19 +45,19 @@ Recorded exactly as verified in the old Replit audit. Classification: **PRESERVE
 
 | Metric | Old formula (historical) | Classification | NEW FPM stance |
 | --- | --- | --- | --- |
-| Funded / current capital | `SUM(all TradingAccount.currentSize)` including ACTIVE, PAUSED, CLOSED | **UNRESOLVED** | Strong candidate for “current funded capital”; Spec also names “total funded capital” — relationship still open (OQ-001) |
-| Portfolio growth | `(SUM(currentSize) - SUM(initialSize)) / SUM(initialSize) × 100` | **UNRESOLVED** | Candidate; needs explicit approval (OQ-002) |
+| Funded / current capital | `SUM(all TradingAccount.currentSize)` including ACTIVE, PAUSED, CLOSED | **PRESERVE** (ADR-014) | Current = SUM(currentSize); **Total** = SUM(initialSize); non-archived; per currency |
+| Portfolio growth | `(SUM(currentSize) - SUM(initialSize)) / SUM(initialSize) × 100` | **PRESERVE** (ADR-014) | N/A if initial sum = 0 |
 | Paid / lifetime income | `SUM(amount WHERE status = PAID)` | **CHANGE** | NEW = sum where PAID **and** `receivedAt` present; still per currency |
 | Period income | PAID amounts bucketed by **`requestedAt`** | **CHANGE** | NEW buckets by **`receivedAt`** |
 | Pending amount | `SUM(amount WHERE status = PENDING)` | **PRESERVE** | Keep, currency-grouped |
-| Average payout | lifetime PAID amount / PAID withdrawal count | **UNRESOLVED** | Candidate using NEW recognized set (OQ-002) |
-| Average monthly income | lifetime PAID amount / inclusive month count | **UNRESOLVED** | Candidate; define “inclusive month count” (OQ-002) |
-| Yield / income yield | lifetime PAID / total current funded capital × 100 | **UNRESOLVED** | Candidate; depends on capital + recognition rules (OQ-002) |
-| Broker net P/L | `current equity + withdrawals - deposits` | **UNRESOLVED** | Candidate (OQ-003) |
-| Broker ROI | `net P/L / deposits × 100` | **UNRESOLVED** | Candidate + Spec N/A if deposits = 0 (OQ-003) |
-| Combined managed capital | funded current capital + broker current equity | **CHANGE** | Allowed only when currencies match; else separate (OQ-012) |
-| Combined generated profit | funded lifetime PAID + broker net P/L | **CHANGE** | Same currency constraint; formula adoption still open (OQ-012) |
-| Mixed-currency aggregates | Combined USD+EUR etc. without conversion | **CHANGE** / forbidden | **REMOVE** from NEW FPM |
+| Average payout | lifetime PAID amount / PAID withdrawal count | **PRESERVE** (ADR-014) | Uses recognized set; N/A if count = 0 |
+| Average monthly income | lifetime PAID / inclusive month count | **PRESERVE** (ADR-014) | Inclusive UTC months from earliest receivedAt → now |
+| Yield / income yield | lifetime PAID / total current funded capital × 100 | **PRESERVE** (ADR-014) | N/A if current capital = 0 |
+| Broker net P/L | `current equity + withdrawals - deposits` | **PRESERVE** (ADR-014) | N/A if no latest equity |
+| Broker ROI | `net P/L / deposits × 100` | **PRESERVE** (ADR-014) | N/A if deposits = 0 |
+| Combined managed capital | funded current capital + broker current equity | **CHANGE** (ADR-014) | Same currency only; else omit |
+| Combined generated profit | funded lifetime PAID + broker net P/L | **CHANGE** (ADR-014) | Same currency only; else omit |
+| Mixed-currency aggregates | Combined USD+EUR etc. without conversion | **REMOVE** | Forbidden |
 
 ---
 
@@ -68,24 +68,24 @@ Recorded exactly as verified in the old Replit audit. Classification: **PRESERVE
 | Recognized payout total | Withdrawal | Sum `amount` | Per currency | `receivedAt` | PAID + receivedAt | CONFIRMED | TZ (OQ-009) |
 | Pending withdrawal amount | Withdrawal | Sum `amount` | Per currency | — | PENDING | CONFIRMED (HB-005) | — |
 | Total paid withdrawals (count) | Withdrawal | Count recognized | — | — | PAID + receivedAt | CONFIRMED | — |
-| Total funded capital | TradingAccount | **UNRESOLVED** | Per currency | Point-in-time | ? | Spec name | OQ-001 / HB-001 |
-| Current funded capital | TradingAccount | **UNRESOLVED** (HB-001 candidate: sum all `currentSize`) | Per currency | Point-in-time | All phases in old FPM | Candidate only | OQ-001 |
-| Lifetime income | Withdrawals | All-time recognized sum | Per currency | `receivedAt` | PAID+receivedAt | CONFIRMED mechanism | Label synonym OK |
+| Total funded capital | TradingAccount | SUM(`initialSize`) non-archived | Per currency | Point-in-time | All phases | CONFIRMED (ADR-014) | — |
+| Current funded capital | TradingAccount | SUM(`currentSize`) non-archived | Per currency | Point-in-time | All phases | CONFIRMED (ADR-014 / HB-001) | — |
+| Lifetime income | Withdrawals | All-time recognized sum | Per currency | `receivedAt` | PAID+receivedAt | CONFIRMED | — |
 | Monthly / quarterly / yearly income | Withdrawals | Period recognized sums | Per currency | `receivedAt` + TZ | PAID+receivedAt | CONFIRMED mechanism | Period edges |
-| Average payout | Withdrawals | **UNRESOLVED** (HB-006 candidate) | Per currency | — | Recognized | Candidate | OQ-002 |
-| Avg / month | Withdrawals | **UNRESOLVED** (HB-007 candidate) | Per currency | — | Recognized | Candidate | OQ-002 |
-| Largest withdrawal | Withdrawals | **UNRESOLVED** (likely max recognized) | Per currency | — | Recognized | — | OQ-002 |
-| Best month | Withdrawals | **UNRESOLVED** | Per currency | Month of `receivedAt` | Recognized | — | OQ-002 |
-| Income yield | Payouts + capital | **UNRESOLVED** (HB-008 candidate) | — | — | — | Candidate | OQ-002 |
-| Portfolio growth | Account sizes | **UNRESOLVED** (HB-002 candidate) | Per currency | — | — | Candidate | OQ-002 |
+| Average payout | Withdrawals | recognized ÷ count | Per currency | — | Recognized | CONFIRMED (ADR-014) | — |
+| Avg / month | Withdrawals | recognized ÷ inclusive UTC months | Per currency | earliest→now | Recognized | CONFIRMED (ADR-014) | — |
+| Largest withdrawal | Withdrawals | max recognized `amount` | Per currency | — | Recognized | CONFIRMED (ADR-014) | — |
+| Best month | Withdrawals | max monthly recognized sum | Per currency | Month of `receivedAt` | Recognized | CONFIRMED (ADR-014) | — |
+| Income yield | Payouts + capital | lifetime ÷ current capital × 100 | Per currency | — | — | CONFIRMED (ADR-014) | — |
+| Portfolio growth | Account sizes | (current−initial)/initial × 100 | Per currency | — | — | CONFIRMED (ADR-014) | — |
 | Firm / account income share | Withdrawals | Sum recognized by firm/account | Per currency | `receivedAt` | Recognized | CONFIRMED path | — |
 | Broker total deposits / withdrawals | Ledger | Sums | Account currency | dates | — | CONFIRMED | — |
-| Net deposited | Deposits − withdrawals | Same currency | Account currency | — | — | CONFIRMED difference | Naming |
-| Latest equity | EquitySnapshot | Latest by date | Account currency | snapshotDate | — | CONFIRMED | Tie-break |
-| Broker P/L | Equity + cashflows | **UNRESOLVED** (HB-009 candidate) | Account currency | — | — | Candidate | OQ-003 |
-| Broker ROI | P/L ÷ deposits | **UNRESOLVED** (HB-010); N/A if 0 | — | — | — | Candidate | OQ-003 |
-| Peak equity / drawdown | Snapshots | **UNRESOLVED** | — | — | — | Screenshot | OQ-004/005 |
-| Combined capital / profit | Funded + real | **UNRESOLVED** + currency-safe only | Must match | — | — | Screenshot | OQ-012 |
+| Net deposited | Deposits − withdrawals | Same currency | Account currency | — | — | CONFIRMED difference | — |
+| Latest equity | EquitySnapshot | Latest by date | Account currency | snapshotDate | — | CONFIRMED | — |
+| Broker P/L | Equity + cashflows | equity + wd − deposits | Account currency | — | — | CONFIRMED (ADR-014) | — |
+| Broker ROI | P/L ÷ deposits | N/A if deposits = 0 | Account currency | — | — | CONFIRMED (ADR-014) | — |
+| Peak equity / drawdown | Snapshots | max equity; (peak−latest)/peak | Account currency | — | — | CONFIRMED (ADR-014) | — |
+| Combined capital / profit | Funded + real | Same-currency sum only; else omit | Must match | — | — | CONFIRMED (ADR-014) | — |
 
 ## Non-authority surfaces
 

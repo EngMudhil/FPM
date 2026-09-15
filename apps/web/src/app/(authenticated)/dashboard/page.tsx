@@ -56,10 +56,9 @@ export default async function DashboardPage() {
         }
       />
 
-      <Alert tone="info" title="Confirmed metrics only">
-        Total/current funded capital, portfolio growth, avg/month, and broker cards are deferred
-        until open questions resolve ({snapshot.deferred.fundedCapital};{' '}
-        {snapshot.deferred.brokerMetrics}).
+      <Alert tone="info" title="Financial Domain (ADR-014)">
+        Capital, growth, yield, averages, and same-currency combined totals come from
+        `@fpm/financial`. Mixed currencies never silently combine.
       </Alert>
 
       <div
@@ -70,6 +69,24 @@ export default async function DashboardPage() {
           marginTop: 24,
         }}
       >
+        <MetricCard
+          label="Total funded capital"
+          value={metrics.totalFundedCapital}
+          helper="SUM(initialSize) · per currency"
+          tone="neutral"
+        />
+        <MetricCard
+          label="Current funded capital"
+          value={metrics.currentFundedCapital}
+          helper="SUM(currentSize) · per currency"
+          tone="neutral"
+        />
+        <MetricCard
+          label="Portfolio growth"
+          value={metrics.portfolioGrowth}
+          helper="(current−initial)/initial"
+          tone="teal"
+        />
         <MetricCard
           label="This month"
           value={metrics.thisMonthRecognized}
@@ -94,11 +111,37 @@ export default async function DashboardPage() {
           helper="Status PENDING · per currency"
           tone="pink"
         />
+        <MetricCard label="Avg payout" value={metrics.averagePayout} helper="Recognized ÷ count" />
+        <MetricCard
+          label="Avg / month"
+          value={metrics.averageMonthly}
+          helper="Recognized ÷ inclusive UTC months"
+        />
+        <MetricCard
+          label="Income yield"
+          value={metrics.incomeYield}
+          helper="Lifetime ÷ current capital"
+        />
+        <MetricCard
+          label="Largest withdrawal"
+          value={metrics.largestWithdrawal}
+          helper="Max recognized"
+        />
+        <MetricCard label="Best month" value={metrics.bestMonth} helper="UTC month of receivedAt" />
         <MetricCard
           label="Active accounts"
           value={String(metrics.activeAccountCount)}
           helper={`${metrics.totalAccountCount} total (non-archived)`}
-          tone="neutral"
+        />
+        <MetricCard
+          label="Combined capital"
+          value={metrics.combinedManagedCapital}
+          helper="Funded current + broker equity (same FX only)"
+        />
+        <MetricCard
+          label="Combined profit"
+          value={metrics.combinedGeneratedProfit}
+          helper="Recognized + broker P/L (same FX only)"
         />
       </div>
 
