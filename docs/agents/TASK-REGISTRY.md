@@ -23,19 +23,19 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-009 | Certificates | PASS | 90369ca · PR #7 merged |
 | FPM-010 | Scale Events | PASS | 3e60a59 · PR #8 merged |
 | FPM-011 | Dashboard | PASS | e1ad878 · PR #9 merged |
-| FPM-012 | Reports | PASS | See completion record (this branch) |
+| FPM-012 | Reports | PASS | c0b3ccc · PR #10 merged |
+| FPM-013 | Excel Export | PASS | See completion record (this branch) |
 
-### FPM-012 completion
+### FPM-013 completion
 
 * **Date:** 2026-09-15
-* **Summary:** Reports page with period (month/quarter/year/all) + currency filters; firm/account recognized income breakdowns via `@fpm/financial`; status/phase distributions
-* **Deferred:** avg payout (OQ-002), capital (OQ-001), broker (FPM-014)
+* **Summary:** Injection-safe `.xlsx` exports (exceljs) for firms, accounts, withdrawals, scale events, certificates, dashboard summary; Settings → Data download links; money as decimal strings
+* **Deferred:** Broker module exports (FPM-014); background jobs for huge datasets
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-013 | Excel Export | Backend + QA | Core modules | Injection-safe exports | Lead + QA | Export actions |
 | FPM-014 | Broker Accounts | Frontend + Backend + Financial | FPM-003+ | Full real domain slice | Lead + QA + Database | `/broker-accounts/*` |
 | FPM-015 | Audit | Backend + Frontend + Security | Mutations instrumented | Append-only audit UI | Security + Lead | `/settings/audit-log` |
 | FPM-016 | Backup | DevOps + Backend | Storage | Spec ZIP format + job | Security + Lead | Backup jobs |
@@ -46,4 +46,4 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 
 ## Recommended next task
 
-**FPM-013 — Excel Export** (after FPM-012 PASS)
+**FPM-014 — Broker Accounts** (after FPM-013 PASS)
