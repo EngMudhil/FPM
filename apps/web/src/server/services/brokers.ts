@@ -11,7 +11,13 @@ import {
   type Database,
 } from '@fpm/db';
 import { currencyCodeSchema, Money } from '@fpm/money';
-import { netDeposited } from '@fpm/financial';
+import {
+  netDeposited,
+  brokerNetProfitLoss,
+  brokerRoi,
+  peakEquity,
+  equityDrawdownPercent,
+} from '@fpm/financial';
 import { AppError } from '../errors';
 
 export type BrokerInput = { name: string; website?: string | null; notes?: string | null };
@@ -187,6 +193,22 @@ export async function getBrokerAccountLedger(db: Database, workspaceId: string, 
     withdrawals: withdrawals.map((w) => ({ amount: w.amount, currency: w.currency })),
   });
   const latestEquity = snapshots[0]?.equity ?? null;
+  const cashflows = {
+    currency: account.currency,
+    latestEquity,
+    deposits: deposits.map((d) => ({ amount: d.amount, currency: d.currency })),
+    withdrawals: withdrawals.map((w) => ({ amount: w.amount, currency: w.currency })),
+  };
+  const peak = peakEquity(
+    snapshots.map((s) => ({
+      id: s.id,
+      equity: s.equity,
+      snapshotDate: s.snapshotDate,
+      currency: s.currency,
+    })),
+  );
+  const pnl = brokerNetProfitLoss(cashflows);
+  const roi = brokerRoi(cashflows);
 
   return {
     account,
@@ -196,8 +218,14 @@ export async function getBrokerAccountLedger(db: Database, workspaceId: string, 
     metrics: {
       netDeposited: `${net} ${account.currency}`,
       latestEquity: latestEquity ? `${latestEquity} ${account.currency}` : '—',
-      profitLoss: 'Deferred (OQ-003)',
-      roi: 'Deferred (OQ-003); zero deposits → N/A when shipped',
+      peakEquity: peak ? `${peak.equity} ${peak.currency}` : '—',
+      drawdown: equityDrawdownPercent({
+        peakEquity: peak?.equity ?? null,
+        latestEquity,
+        currency: account.currency,
+      }),
+      profitLoss: pnl === 'N/A' ? 'N/A' : `${pnl} ${account.currency}`,
+      roi,
     },
   };
 }

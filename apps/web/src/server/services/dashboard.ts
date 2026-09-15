@@ -1,5 +1,9 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import {
+  brokerAccounts,
+  brokerDeposits,
+  brokerWithdrawals,
+  equitySnapshots,
   firms,
   scaleEvents,
   tradingAccounts,
@@ -8,12 +12,23 @@ import {
   type Database,
   type WithdrawalStatus,
 } from '@fpm/db';
+import { Money } from '@fpm/money';
 import {
+  averageMonthlyIncomeByCurrency,
+  averagePayoutByCurrency,
+  bestMonthByCurrency,
+  brokerNetProfitLoss,
+  combineSameCurrencyMaps,
   countRecognizedPayouts,
   countWithdrawalsByStatus,
+  incomeYieldByCurrency,
+  largestRecognizedByCurrency,
+  portfolioGrowthByCurrency,
+  sumCurrentFundedCapitalByCurrency,
   sumPendingByCurrency,
   sumRecognizedByCurrency,
   sumRecognizedInRange,
+  sumTotalFundedCapitalByCurrency,
   utcMonthBounds,
   type WithdrawalRecord,
 } from '@fpm/financial';
@@ -41,15 +56,31 @@ function formatMoneyMap(map: Record<string, string>): string {
   return entries.map(([currency, amount]) => `${amount} ${currency}`).join(' · ');
 }
 
+function formatPercentMap(map: Record<string, string>): string {
+  const entries = Object.entries(map);
+  if (entries.length === 0) return '—';
+  return entries.map(([currency, value]) => `${value} (${currency})`).join(' · ');
+}
+
 export type DashboardSnapshot = {
   metrics: {
     thisMonthRecognized: string;
     lastMonthRecognized: string;
     lifetimeRecognized: string;
     pendingAmount: string;
+    totalFundedCapital: string;
+    currentFundedCapital: string;
+    portfolioGrowth: string;
+    averagePayout: string;
+    averageMonthly: string;
+    incomeYield: string;
+    largestWithdrawal: string;
+    bestMonth: string;
     recognizedPayoutCount: number;
     activeAccountCount: number;
     totalAccountCount: number;
+    combinedManagedCapital: string;
+    combinedGeneratedProfit: string;
   };
   withdrawalStatusDistribution: Record<WithdrawalStatus, number>;
   phaseDistribution: Record<AccountPhase, number>;
@@ -70,11 +101,6 @@ export type DashboardSnapshot = {
     accountLabel: string;
     scaledAt: Date;
   }>;
-  deferred: {
-    fundedCapital: string;
-    brokerMetrics: string;
-    unresolvedFormulas: string;
-  };
 };
 
 export async function getDashboardSnapshot(
@@ -82,12 +108,23 @@ export async function getDashboardSnapshot(
   workspaceId: string,
   now: Date = new Date(),
 ): Promise<DashboardSnapshot> {
-  const [withdrawalRows, accountRows, recentWd, recentScale] = await Promise.all([
+  const [
+    withdrawalRows,
+    accountRows,
+    recentWd,
+    recentScale,
+    brokerAccountRows,
+    snapshotRows,
+    depositRows,
+    brokerWdRows,
+  ] = await Promise.all([
     db.select().from(withdrawals).where(eq(withdrawals.workspaceId, workspaceId)),
     db
       .select({
         phase: tradingAccounts.phase,
-        archivedAt: tradingAccounts.archivedAt,
+        initialSize: tradingAccounts.initialSize,
+        currentSize: tradingAccounts.currentSize,
+        currency: tradingAccounts.currency,
       })
       .from(tradingAccounts)
       .where(and(eq(tradingAccounts.workspaceId, workspaceId), isNull(tradingAccounts.archivedAt))),
@@ -118,10 +155,23 @@ export async function getDashboardSnapshot(
       .where(eq(scaleEvents.workspaceId, workspaceId))
       .orderBy(desc(scaleEvents.scaledAt))
       .limit(5),
+    db.select().from(brokerAccounts).where(eq(brokerAccounts.workspaceId, workspaceId)),
+    db
+      .select()
+      .from(equitySnapshots)
+      .where(eq(equitySnapshots.workspaceId, workspaceId))
+      .orderBy(desc(equitySnapshots.snapshotDate)),
+    db.select().from(brokerDeposits).where(eq(brokerDeposits.workspaceId, workspaceId)),
+    db.select().from(brokerWithdrawals).where(eq(brokerWithdrawals.workspaceId, workspaceId)),
   ]);
 
   const records = withdrawalRows.map(toRecord);
   const bounds = utcMonthBounds(now);
+  const sizeRows = accountRows.map((row) => ({
+    initialSize: row.initialSize,
+    currentSize: row.currentSize,
+    currency: row.currency,
+  }));
 
   const phaseDistribution: Record<AccountPhase, number> = {
     ACTIVE: 0,
@@ -132,6 +182,60 @@ export async function getDashboardSnapshot(
     phaseDistribution[row.phase] += 1;
   }
 
+  const currentCapital = sumCurrentFundedCapitalByCurrency(sizeRows);
+  const lifetime = sumRecognizedByCurrency(records);
+
+  const latestByAccount = new Map<string, { equity: string; currency: string }>();
+  for (const snap of snapshotRows) {
+    if (!latestByAccount.has(snap.brokerAccountId)) {
+      latestByAccount.set(snap.brokerAccountId, { equity: snap.equity, currency: snap.currency });
+    }
+  }
+
+  const brokerEquityTotals: Record<string, Money> = {};
+  const brokerPnlTotals: Record<string, Money> = {};
+  for (const account of brokerAccountRows) {
+    const latest = latestByAccount.get(account.id);
+    if (latest) {
+      const equity = Money.fromString(latest.equity, latest.currency);
+      brokerEquityTotals[equity.currency] = brokerEquityTotals[equity.currency]
+        ? brokerEquityTotals[equity.currency]!.add(equity)
+        : equity;
+    }
+    const pnl = brokerNetProfitLoss({
+      currency: account.currency,
+      latestEquity: latest?.equity ?? null,
+      deposits: depositRows
+        .filter((d) => d.brokerAccountId === account.id)
+        .map((d) => ({ amount: d.amount, currency: d.currency })),
+      withdrawals: brokerWdRows
+        .filter((w) => w.brokerAccountId === account.id)
+        .map((w) => ({ amount: w.amount, currency: w.currency })),
+    });
+    if (pnl !== 'N/A') {
+      const money = Money.fromString(pnl, account.currency);
+      brokerPnlTotals[money.currency] = brokerPnlTotals[money.currency]
+        ? brokerPnlTotals[money.currency]!.add(money)
+        : money;
+    }
+  }
+
+  const brokerEquityMap = Object.fromEntries(
+    Object.entries(brokerEquityTotals).map(([c, m]) => [c, m.toString()]),
+  );
+  const brokerPnlMap = Object.fromEntries(
+    Object.entries(brokerPnlTotals).map(([c, m]) => [c, m.toString()]),
+  );
+
+  const combinedCapital = combineSameCurrencyMaps(currentCapital, brokerEquityMap);
+  const combinedProfit = combineSameCurrencyMaps(lifetime, brokerPnlMap);
+
+  const best = bestMonthByCurrency(records);
+  const bestMonthLabel =
+    Object.entries(best)
+      .map(([c, v]) => `${v.month}: ${v.amount} ${c}`)
+      .join(' · ') || '—';
+
   return {
     metrics: {
       thisMonthRecognized: formatMoneyMap(
@@ -140,11 +244,25 @@ export async function getDashboardSnapshot(
       lastMonthRecognized: formatMoneyMap(
         sumRecognizedInRange(records, bounds.lastMonth.start, bounds.lastMonth.end),
       ),
-      lifetimeRecognized: formatMoneyMap(sumRecognizedByCurrency(records)),
+      lifetimeRecognized: formatMoneyMap(lifetime),
       pendingAmount: formatMoneyMap(sumPendingByCurrency(records)),
+      totalFundedCapital: formatMoneyMap(sumTotalFundedCapitalByCurrency(sizeRows)),
+      currentFundedCapital: formatMoneyMap(currentCapital),
+      portfolioGrowth: formatPercentMap(portfolioGrowthByCurrency(sizeRows)),
+      averagePayout: formatMoneyMap(averagePayoutByCurrency(records)),
+      averageMonthly: formatMoneyMap(averageMonthlyIncomeByCurrency(records, now)),
+      incomeYield: formatPercentMap(incomeYieldByCurrency(records, sizeRows)),
+      largestWithdrawal: formatMoneyMap(largestRecognizedByCurrency(records)),
+      bestMonth: bestMonthLabel,
       recognizedPayoutCount: countRecognizedPayouts(records),
       activeAccountCount: phaseDistribution.ACTIVE,
       totalAccountCount: accountRows.length,
+      combinedManagedCapital: combinedCapital
+        ? `${combinedCapital.amount} ${combinedCapital.currency}`
+        : '— (mixed or incomplete)',
+      combinedGeneratedProfit: combinedProfit
+        ? `${combinedProfit.amount} ${combinedProfit.currency}`
+        : '— (mixed or incomplete)',
     },
     withdrawalStatusDistribution: countWithdrawalsByStatus(withdrawalRows),
     phaseDistribution,
@@ -173,10 +291,5 @@ export async function getDashboardSnapshot(
         firmName: row.firmName,
       }),
     })),
-    deferred: {
-      fundedCapital: 'Deferred — OQ-001 (total vs current funded capital)',
-      brokerMetrics: 'Deferred — FPM-014 broker domain',
-      unresolvedFormulas: 'Avg/month, growth, yield gated on OQ-002 / OQ-017',
-    },
   };
 }

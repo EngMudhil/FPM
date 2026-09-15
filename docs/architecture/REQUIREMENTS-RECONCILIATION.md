@@ -80,8 +80,8 @@ Classification values (exactly one per row):
 | Recognized payout totals = PAID + `receivedAt` | SPECIFICATION-CONFIRMED | Spec §9 Reports | **Authoritative** | Only explicit payout recognition rule | Financial Domain | Timezone boundaries |
 | Never silently combine currencies | BOTH | Spec §9; project rules | Adopt | Safety | All aggregates | FX FUTURE |
 | Show N/A not Infinity when ROI denom=0 | SPECIFICATION-CONFIRMED | Spec Broker Accounts | Adopt | Explicit | Broker metrics | — |
-| Total vs current funded capital | SPECIFICATION-CONFIRMED (names) | Spec Dashboard | Names required; **formulas UNRESOLVED** | Spec lists metrics without formulas | Block precise calc until decided | Exact definitions |
-| Income yield, avg payout, portfolio growth, peak equity, drawdown, ROI, lifetime, etc. | SCREENSHOT-CONFIRMED (presence) / UNRESOLVED (formula) | Screenshots; FPM-002 | Do not invent | Task rule | Stub or omit until decided | See OPEN-QUESTIONS |
+| Total vs current funded capital | SPECIFICATION-CONFIRMED | Spec Dashboard | **ADR-014** | Lead decision | Domain + dashboard | Resolved |
+| Income yield, avg payout, portfolio growth, peak equity, drawdown, ROI, lifetime, etc. | SCREENSHOT-CONFIRMED / ADR-014 | Screenshots; FPM-021 | Formulas in `@fpm/financial` | Lead pack | Dashboard / brokers | Resolved (ADR-014) |
 | Dashboard ROI 8.1% vs 8.05% | SCREENSHOT-CONFIRMED inconsistency | Screenshot 4 | Single Financial Domain rounding | UI bug | Domain owns format | Rounding policy |
 
 ---

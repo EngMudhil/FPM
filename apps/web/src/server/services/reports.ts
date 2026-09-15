@@ -159,10 +159,6 @@ export async function getReportsSnapshot(
       withdrawalRows.map((row) => row.withdrawal),
     ),
     phaseDistribution,
-    deferred: [
-      'Average payout / avg month — OQ-002 / OQ-017',
-      'Funded capital progression — OQ-001',
-      'Broker equity & P/L — FPM-014',
-    ],
+    deferred: ['Members UI deferred (OQ-010)', 'S3 object storage still prod follow-up (OQ-013)'],
   };
 }

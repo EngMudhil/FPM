@@ -100,7 +100,7 @@ Field lists below for domain entities are **observed or strongly implied**. Type
 
 * **Purpose:** Live broker trading account tracking
 * **Fields:** brokerId*, accountName*, accountNumber?, startingCapital, currency, startDate?, notes?
-* **Observed metrics (computed or stored — UNRESOLVED):** currentEquity, netPL, totalDeposits, totalWithdrawals, peakEquity, tradingDrawdown, roi, snapshotCount
+* **Observed metrics (computed via `@fpm/financial`, ADR-014):** currentEquity, netPL, totalDeposits, totalWithdrawals, peakEquity, tradingDrawdown, roi, snapshotCount
 * **Relationships:** Broker; Deposits; Withdrawals; Equity Snapshots
 
 ## Broker Deposit

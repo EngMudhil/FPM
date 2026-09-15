@@ -86,8 +86,8 @@ export default async function BrokerAccountDetailPage({
       />
 
       <Alert tone="info" title="Confirmed broker metrics">
-        Net deposited and latest equity are authoritative. Profit/loss and ROI remain deferred
-        (OQ-003). Duplicate equity dates are rejected (ADR-012 / OQ-015).
+        Net deposited and equity metrics are authoritative (ADR-014). Duplicate equity dates are
+        rejected (ADR-012).
       </Alert>
 
       <div
@@ -108,8 +108,10 @@ export default async function BrokerAccountDetailPage({
           helper="Deposits − withdrawals"
         />
         <MetricCard label="Latest equity" value={metrics.latestEquity} />
-        <MetricCard label="P/L" value="—" helper={metrics.profitLoss} />
-        <MetricCard label="ROI" value="—" helper={metrics.roi} />
+        <MetricCard label="Peak equity" value={metrics.peakEquity} />
+        <MetricCard label="Drawdown" value={metrics.drawdown} helper="(peak−latest)/peak" />
+        <MetricCard label="P/L" value={metrics.profitLoss} helper="equity + wd − deposits" />
+        <MetricCard label="ROI" value={metrics.roi} helper="P/L ÷ deposits" />
       </div>
 
       <section style={{ marginTop: 28 }}>
