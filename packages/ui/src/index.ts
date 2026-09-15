@@ -1,6 +1,35 @@
-/**
- * Shared UI primitives for Funded Portfolio Manager.
- * Placeholder — shadcn/ui components will be added in later tasks.
- */
+export { fpmTokens } from './tokens';
+export type { FpmTokens } from './tokens';
+export { cn } from './lib/cn';
+export { fpmNavGroups, isNavItemActive } from './navigation';
+export type { NavGroup, NavItem } from './navigation';
 
-export {};
+export { Button } from './components/button';
+export type { ButtonProps, ButtonVariant, ButtonSize } from './components/button';
+export { Input } from './components/input';
+export type { InputProps } from './components/input';
+export { Select } from './components/select';
+export type { SelectProps } from './components/select';
+export { Textarea } from './components/textarea';
+export type { TextareaProps } from './components/textarea';
+export { FormField } from './components/form-field';
+export type { FormFieldProps } from './components/form-field';
+export { SearchInput } from './components/search-input';
+export type { SearchInputProps } from './components/search-input';
+export { Card, MetricCard } from './components/card';
+export type { CardProps, MetricCardProps, MetricTone } from './components/card';
+export { Badge } from './components/badge';
+export type { BadgeProps, BadgeTone } from './components/badge';
+export { Table, THead, TBody, TR, TH, TD } from './components/table';
+export { Pagination } from './components/pagination';
+export type { PaginationProps } from './components/pagination';
+export { Alert } from './components/alert';
+export type { AlertProps, AlertTone } from './components/alert';
+export { EmptyState, ErrorState, LoadingSkeleton } from './components/feedback';
+export type { EmptyStateProps, ErrorStateProps, LoadingSkeletonProps } from './components/feedback';
+export { Dialog, ConfirmationDialog } from './components/dialog';
+export type { DialogProps, ConfirmationDialogProps } from './components/dialog';
+export { PageHeader, Breadcrumbs } from './components/page-header';
+export type { PageHeaderProps, BreadcrumbsProps, BreadcrumbItem } from './components/page-header';
+export { AppShell, Sidebar } from './components/app-shell';
+export type { AppShellProps, SidebarProps } from './components/app-shell';

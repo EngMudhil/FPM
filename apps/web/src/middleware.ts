@@ -15,7 +15,11 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === '/login' && token) {
-    return NextResponse.redirect(new URL('/app', request.url));
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  if (pathname === '/app' && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return NextResponse.next();

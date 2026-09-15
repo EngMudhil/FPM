@@ -1,10 +1,20 @@
 # DESIGN-SYSTEM
 
-Status: Authored (FPM-002).  
+Status: Implemented baseline (FPM-004) in `@fpm/ui`.  
 Owner: Frontend.  
 Goal: **Existing FPM identity + consistency + usability + accessibility + reusable components** (not generic purple SaaS).
 
-Evidence: Screenshots 1–4, 6–27.
+Evidence: Screenshots 1–4, 6–27 + Spec §6 tokens.
+
+## Implementation (FPM-004)
+
+* Package: `packages/ui` (`@fpm/ui`)
+* Tokens: `tokens.css` / `tokens.ts` (Spec §6 colors, radii, type scale)
+* Styles: `styles.css` component classes (imported by `apps/web`)
+* Shell: `AppShell` + `Sidebar` with ADR-008 / Spec §5 IA
+* Primitives: Button, Input, Select, Textarea, FormField, SearchInput, Card, MetricCard, Badge, Table, Pagination, Alert, EmptyState, ErrorState, LoadingSkeleton, Dialog, ConfirmationDialog, PageHeader, Breadcrumbs
+* Font: Plus Jakarta Sans (Spec: Inter/Geist/equivalent)
+* Responsive: sticky sidebar desktop; drawer < 860px
 
 ## Identity summary (CONFIRMED)
 

@@ -1,0 +1,49 @@
+:root {
+  --fpm-bg: #f8fafc;
+  --fpm-surface: #ffffff;
+  --fpm-muted-surface: #f8fafc;
+  --fpm-hover: #f1f5f9;
+  --fpm-text: #0f172a;
+  --fpm-text-secondary: #475569;
+  --fpm-text-muted: #64748b;
+  --fpm-text-disabled: #94a3b8;
+  --fpm-border: #e2e8f0;
+  --fpm-border-strong: #cbd5e1;
+  --fpm-primary: #2563eb;
+  --fpm-primary-hover: #1d4ed8;
+  --fpm-primary-pale: #eff6ff;
+  --fpm-success: #0d9488;
+  --fpm-success-dark: #0f766e;
+  --fpm-success-pale: #f0fdfa;
+  --fpm-warning: #d97706;
+  --fpm-warning-dark: #b45309;
+  --fpm-warning-pale: #fffbeb;
+  --fpm-danger: #dc2626;
+  --fpm-danger-dark: #b91c1c;
+  --fpm-danger-pale: #fef2f2;
+  --fpm-cta: #0f766e;
+  --fpm-cta-hover: #115e59;
+  --fpm-metric-yellow: #fef9c3;
+  --fpm-metric-orange: #ffedd5;
+  --fpm-metric-green: #dcfce7;
+  --fpm-metric-teal: #ccfbf1;
+  --fpm-metric-purple: #ede9fe;
+  --fpm-metric-pink: #fce7f3;
+  --fpm-radius-control: 8px;
+  --fpm-radius-card: 12px;
+  --fpm-radius-dialog: 16px;
+  --fpm-radius-pill: 999px;
+  --fpm-sidebar-width: 260px;
+  --fpm-focus-ring: 0 0 0 3px color-mix(in srgb, var(--fpm-primary) 35%, transparent);
+  --fpm-font: 'Geist', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
