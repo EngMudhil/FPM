@@ -1,12 +1,19 @@
 import { loginAction } from '@/server/actions/auth';
+import { Alert, Button, Card, FormField, Input } from '@fpm/ui';
 import { redirect } from 'next/navigation';
 
-export default function LoginPage() {
+type Props = {
+  searchParams: Promise<{ error?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: Props) {
+  const params = await searchParams;
+
   async function action(formData: FormData) {
     'use server';
     const result = await loginAction(formData);
     if (result.ok) {
-      redirect('/app');
+      redirect('/dashboard');
     }
     redirect('/login?error=1');
   }
@@ -18,71 +25,39 @@ export default function LoginPage() {
         display: 'grid',
         placeItems: 'center',
         padding: '2rem',
-        background: '#F8FAFC',
+        background: 'var(--fpm-bg)',
       }}
     >
-      <form
-        action={action}
-        style={{
-          width: '100%',
-          maxWidth: 400,
-          background: '#fff',
-          border: '1px solid #E2E8F0',
-          borderRadius: 12,
-          padding: '1.5rem',
-          display: 'grid',
-          gap: '1rem',
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: 24, color: '#0F172A' }}>Sign in</h1>
-          <p style={{ margin: '0.35rem 0 0', color: '#64748B', fontSize: 14 }}>
-            Funded Portfolio Manager
-          </p>
-        </div>
-        <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-          Email
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="username"
-            style={{
-              border: '1px solid #E2E8F0',
-              borderRadius: 8,
-              padding: '0.6rem 0.75rem',
-            }}
-          />
-        </label>
-        <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-          Password
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            style={{
-              border: '1px solid #E2E8F0',
-              borderRadius: 8,
-              padding: '0.6rem 0.75rem',
-            }}
-          />
-        </label>
-        <button
-          type="submit"
-          style={{
-            background: '#0D9488',
-            color: '#fff',
-            border: 0,
-            borderRadius: 8,
-            padding: '0.7rem 1rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Sign in
-        </button>
-      </form>
+      <Card style={{ width: '100%', maxWidth: 400 }}>
+        <form action={action} style={{ display: 'grid', gap: '1rem' }}>
+          <div>
+            <h1 className="fpm-page-header__title" style={{ fontSize: 24 }}>
+              Sign in
+            </h1>
+            <p className="fpm-page-header__description">Funded Portfolio Manager</p>
+          </div>
+          {params.error ? (
+            <Alert tone="danger" title="Sign in failed">
+              Invalid email or password
+            </Alert>
+          ) : null}
+          <FormField id="email" label="Email" required>
+            <Input id="email" name="email" type="email" required autoComplete="username" />
+          </FormField>
+          <FormField id="password" label="Password" required>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+            />
+          </FormField>
+          <Button type="submit" variant="primary">
+            Sign in
+          </Button>
+        </form>
+      </Card>
     </main>
   );
 }
