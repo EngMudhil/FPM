@@ -28,22 +28,22 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-014 | Broker Accounts | PASS | 1e12039 · PR #12 merged |
 | FPM-015 | Audit | PASS | b7b4b60 · PR #13 merged |
 | FPM-016 | Backup | PASS | 1907857 · PR #14 merged |
-| FPM-017 | Restore | PASS | See completion record (this branch) |
+| FPM-017 | Restore | PASS | 5fef5f3 · PR #15 merged |
+| FPM-018 | Production Deployment | PASS | See completion record (this branch) |
 
-### FPM-017 completion
+### FPM-018 completion
 
 * **Date:** 2026-09-15
-* **Summary:** restore_jobs; ZIP Slip/checksum/format validation; preview; typed RESTORE + one-time token; pre-restore safety backup; single-txn replace (ADR-013); cert object restore
-* **Migration:** `0009_restore_jobs.sql`
+* **Summary:** Dockerfile, docker-compose.prod.yml, Caddyfile, `.env.production.example`, DEPLOYMENT.md runbook
+* **Deferred:** S3, worker process, CI deploy automation
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-018 | Production Deployment | DevOps | Stable CORE+ops | Caddy/Docker/VPS docs+config | Security + Lead | Deploy artifacts |
 | FPM-019 | Full QA | QA | Feature set | Cross e2e/a11y/financial suite | Lead | QA report |
 | FPM-020 | MT5 Integration | Architecture + Backend + Security | After CORE | Spike/ADR update only until approved | Security + Lead | Spike report |
 
 ## Recommended next task
 
-**FPM-018 — Production Deployment** (after FPM-017 PASS)
+**FPM-019 — Full QA** (after FPM-018 PASS)
