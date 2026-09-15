@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, ilike, isNull, type SQL } from 'drizzle-orm';
-import { createId, firms, type Database, type Firm } from '@fpm/db';
+import { createId, firms, tradingAccounts, type Database, type Firm } from '@fpm/db';
 import { AppError } from '../errors';
 
 export type FirmListQuery = {
@@ -122,8 +122,19 @@ export async function archiveFirm(
   return getFirmById(db, workspaceId, firmId);
 }
 
-/** Hard delete only when not archived history-sensitive children exist (none yet in FPM-005). */
+/** Hard delete blocked when funded accounts exist (protect history). Prefer archive. */
 export async function deleteFirm(db: Database, workspaceId: string, firmId: string): Promise<void> {
   await getFirmById(db, workspaceId, firmId);
+  const children = await db
+    .select({ value: count() })
+    .from(tradingAccounts)
+    .where(and(eq(tradingAccounts.firmId, firmId), eq(tradingAccounts.workspaceId, workspaceId)));
+  if ((children[0]?.value ?? 0) > 0) {
+    throw new AppError(
+      'CONFLICT',
+      'Cannot delete firm while funded accounts exist. Archive the firm instead.',
+      409,
+    );
+  }
   await db.delete(firms).where(and(eq(firms.id, firmId), eq(firms.workspaceId, workspaceId)));
 }

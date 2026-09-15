@@ -4,6 +4,8 @@ export const workspaceRoleEnum = pgEnum('workspace_role', ['OWNER', 'ADMIN', 'ME
 
 export const loginEventTypeEnum = pgEnum('login_event_type', ['SUCCESS', 'FAILURE', 'LOCKOUT']);
 
+export const accountPhaseEnum = pgEnum('account_phase', ['ACTIVE', 'PAUSED', 'CLOSED']);
+
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
@@ -114,6 +116,40 @@ export const firms = pgTable(
   ],
 );
 
+/**
+ * Funded / challenge trading accounts. currentSize is authoritative size cache;
+ * Scale Events (FPM-010) must keep it in sync transactionally.
+ */
+export const tradingAccounts = pgTable(
+  'trading_accounts',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    firmId: text('firm_id')
+      .notNull()
+      .references(() => firms.id, { onDelete: 'restrict' }),
+    accountNumber: text('account_number'),
+    label: text('label'),
+    phase: accountPhaseEnum('phase').notNull().default('ACTIVE'),
+    initialSize: numeric('initial_size', { precision: 20, scale: 8 }).notNull(),
+    currentSize: numeric('current_size', { precision: 20, scale: 8 }).notNull(),
+    currency: text('currency').notNull(),
+    platform: text('platform'),
+    startDate: text('start_date'),
+    notes: text('notes'),
+    archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('trading_accounts_workspace_id_idx').on(table.workspaceId),
+    index('trading_accounts_firm_id_idx').on(table.firmId),
+    index('trading_accounts_phase_idx').on(table.phase),
+    index('trading_accounts_archived_at_idx').on(table.archivedAt),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -122,4 +158,6 @@ export type Workspace = typeof workspaces.$inferSelect;
 export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Firm = typeof firms.$inferSelect;
+export type TradingAccount = typeof tradingAccounts.$inferSelect;
+export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];
