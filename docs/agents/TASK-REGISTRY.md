@@ -20,25 +20,20 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-006 | Funded Accounts | PASS | 4eede63 · PR #4 merged |
 | FPM-007 | Withdrawal Engine | PASS | 8e99706 · PR #5 merged |
 | FPM-008 | Withdrawal UI | PASS | a5b55f8 · PR #6 merged |
-| FPM-009 | Certificates | PASS | See completion record (this branch) |
+| FPM-009 | Certificates | PASS | 90369ca · PR #7 merged |
+| FPM-010 | Scale Events | PASS | See completion record (this branch) |
 
-### FPM-009 completion
+### FPM-010 completion
 
 * **Date:** 2026-09-15
-* **Summary:** certificates table; private local storage (ADR-010); magic-byte + 10MB validation; auth file route; gallery/upload/detail/edit; delete cleans object
-* **Migration:** `0004_certificates.sql`
-* **Deferred:** S3 provider (OQ-013 prod); restore of objects (FPM-017)
+* **Summary:** scale_events table; Spec `toSize`>`fromSize`; transactional `currentSize` resync (ADR-011 / OQ-016); list/new/detail/edit/delete
+* **Migration:** `0005_scale_events.sql`
+* **Domain:** `@fpm/financial` assertScaleSizes + resolveCurrentSizeFromScaleEvents
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-010 | Scale Events | Frontend + Backend + Financial | FPM-006 | toSize>fromSize; txn currentSize | Lead + QA | `/scale-events/*` |
-| FPM-006 | Funded Accounts | Frontend + Backend | FPM-005 | CRUD+detail; phases; identity UX | Lead + QA | `/accounts/*` |
-| FPM-007 | Withdrawal Engine | Financial + Backend + Database | FPM-006 | Domain rules; PAID+receivedAt; statuses; tests | Lead + QA + Security | Domain services |
-| FPM-008 | Withdrawal UI | Frontend + Backend | FPM-007 | Manual record E2E; CTA | Lead + QA | `/withdrawals/*` |
-| FPM-009 | Certificates | Frontend + Backend + DevOps + Security | FPM-008 | Private upload; link withdrawal | Security + Lead + QA | `/certificates/*` |
-| FPM-010 | Scale Events | Frontend + Backend + Financial | FPM-006 | toSize>fromSize; txn currentSize | Lead + QA | `/scale-events/*` |
 | FPM-011 | Dashboard | Frontend + Financial | FPM-007+ | Domain-only metrics; no invented formulas | Lead + QA | `/dashboard` |
 | FPM-012 | Reports | Frontend + Financial | FPM-007 | Period reports; currency-safe | Lead + QA | `/reports` |
 | FPM-013 | Excel Export | Backend + QA | Core modules | Injection-safe exports | Lead + QA | Export actions |
@@ -52,4 +47,4 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 
 ## Recommended next task
 
-**FPM-005 — Firms** (after FPM-004 PASS)
+**FPM-011 — Dashboard** (after FPM-010 PASS)
