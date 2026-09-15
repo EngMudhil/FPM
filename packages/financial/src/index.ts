@@ -241,3 +241,58 @@ export function resolveCurrentSizeFromScaleEvents(
   });
   return sorted[0]!.toSize.trim();
 }
+
+export type BrokerCashflow = {
+  amount: string;
+  currency: string;
+};
+
+/** Sum positive cashflows per currency (deposits or withdrawals). */
+export function sumBrokerCashflowsByCurrency(rows: BrokerCashflow[]): Record<string, string> {
+  const totals: Record<string, Money> = {};
+  for (const row of rows) {
+    const money = Money.fromString(row.amount, row.currency);
+    if (!money.isPositive()) {
+      throw new Error('Broker cashflow amounts must be greater than zero');
+    }
+    const existing = totals[money.currency];
+    totals[money.currency] = existing ? existing.add(money) : money;
+  }
+  return Object.fromEntries(
+    Object.entries(totals).map(([currency, money]) => [currency, money.toString()]),
+  );
+}
+
+/**
+ * Net deposited = deposits − withdrawals for a single currency account.
+ * Throws on currency mismatch (no silent FX).
+ */
+export function netDeposited(input: {
+  currency: string;
+  deposits: BrokerCashflow[];
+  withdrawals: BrokerCashflow[];
+}): string {
+  const code = input.currency.trim().toUpperCase();
+  let deposits = Money.fromString('0', code);
+  let withdrawals = Money.fromString('0', code);
+  for (const row of input.deposits) {
+    const money = Money.fromString(row.amount, row.currency);
+    if (money.currency !== code) throw new Error('Deposit currency must match account currency');
+    deposits = deposits.add(money);
+  }
+  for (const row of input.withdrawals) {
+    const money = Money.fromString(row.amount, row.currency);
+    if (money.currency !== code) throw new Error('Withdrawal currency must match account currency');
+    withdrawals = withdrawals.add(money);
+  }
+  return deposits.sub(withdrawals).toString();
+}
+
+/** Spec: ROI denominator zero → N/A (not Infinity). Formula itself still OQ-003. */
+export function formatReturnOrNA(numerator: string, denominator: string, currency: string): string {
+  const denom = Money.fromString(denominator, currency);
+  if (denom.amount.isZero()) return 'N/A';
+  const num = Money.fromString(numerator, currency);
+  const pct = num.amount.div(denom.amount).times(100);
+  return `${pct.toFixed(2)}%`;
+}

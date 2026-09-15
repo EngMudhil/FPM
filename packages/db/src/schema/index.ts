@@ -237,6 +237,124 @@ export const scaleEvents = pgTable(
   ],
 );
 
+export const brokers = pgTable(
+  'brokers',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    website: text('website'),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('brokers_workspace_name_unique').on(table.workspaceId, table.name),
+    index('brokers_workspace_id_idx').on(table.workspaceId),
+  ],
+);
+
+export const brokerAccounts = pgTable(
+  'broker_accounts',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    brokerId: text('broker_id')
+      .notNull()
+      .references(() => brokers.id, { onDelete: 'restrict' }),
+    accountName: text('account_name').notNull(),
+    accountNumber: text('account_number'),
+    startingCapital: numeric('starting_capital', { precision: 20, scale: 8 }).notNull(),
+    currency: text('currency').notNull(),
+    startDate: text('start_date'),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('broker_accounts_workspace_id_idx').on(table.workspaceId),
+    index('broker_accounts_broker_id_idx').on(table.brokerId),
+  ],
+);
+
+export const brokerDeposits = pgTable(
+  'broker_deposits',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    brokerAccountId: text('broker_account_id')
+      .notNull()
+      .references(() => brokerAccounts.id, { onDelete: 'cascade' }),
+    depositDate: timestamp('deposit_date', { withTimezone: true, mode: 'date' }).notNull(),
+    amount: numeric('amount', { precision: 20, scale: 8 }).notNull(),
+    currency: text('currency').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('broker_deposits_workspace_id_idx').on(table.workspaceId),
+    index('broker_deposits_broker_account_id_idx').on(table.brokerAccountId),
+    index('broker_deposits_workspace_deposit_date_idx').on(table.workspaceId, table.depositDate),
+  ],
+);
+
+export const brokerWithdrawals = pgTable(
+  'broker_withdrawals',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    brokerAccountId: text('broker_account_id')
+      .notNull()
+      .references(() => brokerAccounts.id, { onDelete: 'cascade' }),
+    withdrawalDate: timestamp('withdrawal_date', { withTimezone: true, mode: 'date' }).notNull(),
+    amount: numeric('amount', { precision: 20, scale: 8 }).notNull(),
+    currency: text('currency').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('broker_withdrawals_workspace_id_idx').on(table.workspaceId),
+    index('broker_withdrawals_broker_account_id_idx').on(table.brokerAccountId),
+    index('broker_withdrawals_workspace_withdrawal_date_idx').on(
+      table.workspaceId,
+      table.withdrawalDate,
+    ),
+  ],
+);
+
+/** OQ-015 / ADR-012: duplicate (account, snapshotDate) is rejected (unique). */
+export const equitySnapshots = pgTable(
+  'equity_snapshots',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    brokerAccountId: text('broker_account_id')
+      .notNull()
+      .references(() => brokerAccounts.id, { onDelete: 'cascade' }),
+    snapshotDate: timestamp('snapshot_date', { withTimezone: true, mode: 'date' }).notNull(),
+    equity: numeric('equity', { precision: 20, scale: 8 }).notNull(),
+    currency: text('currency').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('equity_snapshots_account_date_unique').on(
+      table.brokerAccountId,
+      table.snapshotDate,
+    ),
+    index('equity_snapshots_workspace_id_idx').on(table.workspaceId),
+    index('equity_snapshots_workspace_snapshot_date_idx').on(table.workspaceId, table.snapshotDate),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -249,6 +367,11 @@ export type TradingAccount = typeof tradingAccounts.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
 export type Certificate = typeof certificates.$inferSelect;
 export type ScaleEvent = typeof scaleEvents.$inferSelect;
+export type Broker = typeof brokers.$inferSelect;
+export type BrokerAccount = typeof brokerAccounts.$inferSelect;
+export type BrokerDeposit = typeof brokerDeposits.$inferSelect;
+export type BrokerWithdrawal = typeof brokerWithdrawals.$inferSelect;
+export type EquitySnapshot = typeof equitySnapshots.$inferSelect;
 export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
 export type WithdrawalStatus = (typeof withdrawalStatusEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];
