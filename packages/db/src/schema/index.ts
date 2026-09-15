@@ -90,6 +90,30 @@ export const loginEvents = pgTable(
   ],
 );
 
+/**
+ * Prop firms. Soft-archive via archivedAt; never cascade-destroy financial history.
+ * Future trading_accounts will FK here with Restrict/SetNull policy (not Cascade).
+ */
+export const firms = pgTable(
+  'firms',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    website: text('website'),
+    notes: text('notes'),
+    archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('firms_workspace_id_idx').on(table.workspaceId),
+    index('firms_workspace_name_idx').on(table.workspaceId, table.name),
+    index('firms_archived_at_idx').on(table.archivedAt),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -97,4 +121,5 @@ export type User = typeof users.$inferSelect;
 export type Workspace = typeof workspaces.$inferSelect;
 export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
+export type Firm = typeof firms.$inferSelect;
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];

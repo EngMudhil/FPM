@@ -53,9 +53,9 @@ Field lists below for domain entities are **observed or strongly implied**. Type
 ## Firm
 
 * **Purpose:** Prop trading firm
-* **Fields:** name*, website?, notes?, createdAt
-* **Relationships:** has many Trading Accounts; appears on certificates/withdrawals via account
-* **Constraints:** name required
+* **Implemented (FPM-005):** `firms` — workspace_id, name, website?, notes?, archived_at?, created_at, updated_at
+* **Lifecycle:** Archive preferred; hard delete allowed only when no dependent history (enforced in later account FK)
+* **Constraints:** name required; workspace ownership server-side
 
 ## Trading Account (Funded Account)
 
