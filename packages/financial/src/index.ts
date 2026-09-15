@@ -80,3 +80,42 @@ export function sumPendingByCurrency(withdrawals: WithdrawalRecord[]): Record<st
     Object.entries(totals).map(([currency, money]) => [currency, money.toString()]),
   );
 }
+
+/** Spec §8: scale toSize must exceed fromSize (strict). */
+export function assertScaleSizes(input: {
+  fromSize: string;
+  toSize: string;
+  currency: string;
+}): void {
+  const from = Money.fromString(input.fromSize, input.currency);
+  const to = Money.fromString(input.toSize, input.currency);
+  if (!from.isPositive() || !to.isPositive()) {
+    throw new Error('Scale sizes must be greater than zero');
+  }
+  if (!to.amount.greaterThan(from.amount)) {
+    throw new Error('toSize must be greater than fromSize');
+  }
+}
+
+export type ScaleEventSizeRow = {
+  id: string;
+  toSize: string;
+  scaledAt: Date;
+};
+
+/**
+ * ADR-011 / OQ-016: authoritative currentSize after scale CRUD.
+ * Latest event by scaledAt DESC, then id DESC; none → initialSize.
+ */
+export function resolveCurrentSizeFromScaleEvents(
+  events: ScaleEventSizeRow[],
+  initialSize: string,
+): string {
+  if (events.length === 0) return initialSize.trim();
+  const sorted = [...events].sort((a, b) => {
+    const byDate = b.scaledAt.getTime() - a.scaledAt.getTime();
+    if (byDate !== 0) return byDate;
+    return b.id.localeCompare(a.id);
+  });
+  return sorted[0]!.toSize.trim();
+}

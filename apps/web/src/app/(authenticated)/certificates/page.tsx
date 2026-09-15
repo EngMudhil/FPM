@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Badge, Card, EmptyState, PageHeader } from '@fpm/ui';
 import { listCertificatesAction } from '@/server/actions/certificates';
 
@@ -46,9 +47,12 @@ export default async function CertificatesPage() {
                 href={`/certificates/${cert.id}`}
                 style={{ color: 'inherit', textDecoration: 'none' }}
               >
-                <img
+                <Image
                   src={`/api/certificates/${cert.id}/file`}
                   alt={cert.title || cert.originalFilename}
+                  width={440}
+                  height={140}
+                  unoptimized
                   style={{
                     width: '100%',
                     height: 140,

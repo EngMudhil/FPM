@@ -210,6 +210,33 @@ export const certificates = pgTable(
   ],
 );
 
+/**
+ * Scale events. On create/update/delete, trading_accounts.currentSize is
+ * resynced in the same transaction (ADR-011 / Spec §8 + HB-014).
+ */
+export const scaleEvents = pgTable(
+  'scale_events',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    tradingAccountId: text('trading_account_id')
+      .notNull()
+      .references(() => tradingAccounts.id, { onDelete: 'restrict' }),
+    fromSize: numeric('from_size', { precision: 20, scale: 8 }).notNull(),
+    toSize: numeric('to_size', { precision: 20, scale: 8 }).notNull(),
+    scaledAt: timestamp('scaled_at', { withTimezone: true, mode: 'date' }).notNull(),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('scale_events_workspace_id_idx').on(table.workspaceId),
+    index('scale_events_trading_account_id_idx').on(table.tradingAccountId),
+    index('scale_events_workspace_scaled_at_idx').on(table.workspaceId, table.scaledAt),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -221,6 +248,7 @@ export type Firm = typeof firms.$inferSelect;
 export type TradingAccount = typeof tradingAccounts.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
 export type Certificate = typeof certificates.$inferSelect;
+export type ScaleEvent = typeof scaleEvents.$inferSelect;
 export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
 export type WithdrawalStatus = (typeof withdrawalStatusEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];
