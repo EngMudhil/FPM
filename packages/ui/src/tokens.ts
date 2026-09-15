@@ -38,9 +38,9 @@ export const fpmTokens = {
     },
   },
   radius: {
-    control: '8px',
-    card: '12px',
-    dialog: '16px',
+    control: '10px',
+    card: '16px',
+    dialog: '20px',
     pill: '999px',
   },
   space: {
@@ -55,15 +55,15 @@ export const fpmTokens = {
     12: '48px',
   },
   typography: {
-    pageTitle: { size: '24px', weight: 650 },
+    pageTitle: { size: '30px', weight: 750 },
     sectionTitle: { size: '17px', weight: 600 },
-    metric: { size: '28px', weight: 700 },
+    metric: { size: '26px', weight: 750 },
     body: { size: '14px', weight: 400 },
     table: { size: '13px', weight: 400 },
     supporting: { size: '12px', weight: 400 },
     tableHeader: { size: '11px', weight: 600, tracking: '0.04em' },
   },
-  sidebarWidth: '260px',
+  sidebarWidth: '268px',
 } as const;
 
 export type FpmTokens = typeof fpmTokens;

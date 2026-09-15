@@ -52,10 +52,10 @@ describe('ADR-014 income averages', () => {
   ];
 
   it('averages payouts and inclusive months', () => {
-    expect(averagePayoutByCurrency(rows).USD).toBe('75');
+    expect(averagePayoutByCurrency(rows).USD).toBe('75.00');
     expect(inclusiveUtcMonthCount(rows, new Date('2026-03-20T00:00:00.000Z'))).toBe(3);
     expect(averageMonthlyIncomeByCurrency(rows, new Date('2026-03-20T00:00:00.000Z')).USD).toBe(
-      '50',
+      '50.00',
     );
   });
 });
