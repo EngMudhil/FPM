@@ -18,20 +18,20 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-004 | Design System Baseline | PASS | 3b7e9ac · PR #2 merged |
 | FPM-005 | Firms | PASS | e390e20 · PR #3 merged |
 | FPM-006 | Funded Accounts | PASS | 4eede63 · PR #4 merged |
-| FPM-007 | Withdrawal Engine | PASS | See completion record (this branch) |
+| FPM-007 | Withdrawal Engine | PASS | 8e99706 · PR #5 merged |
+| FPM-008 | Withdrawal UI | PASS | See completion record (this branch) |
 
-### FPM-007 completion
+### FPM-008 completion
 
 * **Date:** 2026-09-15
-* **Summary:** `@fpm/financial` recognition/pending/transition rules; `withdrawals` table; server service enforcing PAID+receivedAt, no PAID delete, currency match account
-* **Migration:** `0003_withdrawals.sql`
-* **Deferred:** Withdrawal UI (FPM-008)
+* **Summary:** Withdrawals list/filter with currency-safe totals, record/edit/detail UI; Paid/Received → receivedAt; PAID delete blocked in UI
+* **Deferred:** Certificate attach from withdrawal detail (FPM-009)
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-008 | Withdrawal UI | Frontend + Backend | FPM-007 | Manual record E2E; CTA | Lead + QA | `/withdrawals/*` |
+| FPM-009 | Certificates | Frontend + Backend + DevOps + Security | FPM-008 | Private upload; link withdrawal | Security + Lead + QA | `/certificates/*` |
 | FPM-006 | Funded Accounts | Frontend + Backend | FPM-005 | CRUD+detail; phases; identity UX | Lead + QA | `/accounts/*` |
 | FPM-007 | Withdrawal Engine | Financial + Backend + Database | FPM-006 | Domain rules; PAID+receivedAt; statuses; tests | Lead + QA + Security | Domain services |
 | FPM-008 | Withdrawal UI | Frontend + Backend | FPM-007 | Manual record E2E; CTA | Lead + QA | `/withdrawals/*` |

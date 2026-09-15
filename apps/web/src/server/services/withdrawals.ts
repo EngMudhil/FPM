@@ -1,6 +1,7 @@
 import { and, count, desc, eq, type SQL } from 'drizzle-orm';
 import {
   createId,
+  firms,
   tradingAccounts,
   withdrawals,
   type Database,
@@ -16,6 +17,7 @@ import {
 } from '@fpm/financial';
 import { currencyCodeSchema } from '@fpm/money';
 import { AppError } from '../errors';
+import { accountDisplayName } from './accounts';
 
 export type WithdrawalInput = {
   tradingAccountId: string;
@@ -27,6 +29,12 @@ export type WithdrawalInput = {
   notes?: string | null;
 };
 
+export type WithdrawalWithAccount = Withdrawal & {
+  accountLabel: string;
+  firmName: string;
+  accountNumber: string | null;
+};
+
 function toRecord(row: Withdrawal): WithdrawalRecord {
   return {
     amount: row.amount,
@@ -34,6 +42,24 @@ function toRecord(row: Withdrawal): WithdrawalRecord {
     status: row.status,
     requestedAt: row.requestedAt,
     receivedAt: row.receivedAt,
+  };
+}
+
+function mapJoined(row: {
+  withdrawal: Withdrawal;
+  firmName: string;
+  accountLabel: string | null;
+  accountNumber: string | null;
+}): WithdrawalWithAccount {
+  return {
+    ...row.withdrawal,
+    firmName: row.firmName,
+    accountNumber: row.accountNumber,
+    accountLabel: accountDisplayName({
+      label: row.accountLabel,
+      accountNumber: row.accountNumber,
+      firmName: row.firmName,
+    }),
   };
 }
 
@@ -51,10 +77,17 @@ export async function listWithdrawals(
   if (opts?.status) filters.push(eq(withdrawals.status, opts.status));
   const where = and(...filters);
 
-  const [items, totalRows] = await Promise.all([
+  const [rows, totalRows] = await Promise.all([
     db
-      .select()
+      .select({
+        withdrawal: withdrawals,
+        firmName: firms.name,
+        accountLabel: tradingAccounts.label,
+        accountNumber: tradingAccounts.accountNumber,
+      })
       .from(withdrawals)
+      .innerJoin(tradingAccounts, eq(withdrawals.tradingAccountId, tradingAccounts.id))
+      .innerJoin(firms, eq(tradingAccounts.firmId, firms.id))
       .where(where)
       .orderBy(desc(withdrawals.requestedAt))
       .limit(pageSize)
@@ -62,7 +95,34 @@ export async function listWithdrawals(
     db.select({ value: count() }).from(withdrawals).where(where),
   ]);
 
-  return { items, total: totalRows[0]?.value ?? 0, page, pageSize };
+  return {
+    items: rows.map(mapJoined),
+    total: totalRows[0]?.value ?? 0,
+    page,
+    pageSize,
+  };
+}
+
+export async function getWithdrawalById(
+  db: Database,
+  workspaceId: string,
+  withdrawalId: string,
+): Promise<WithdrawalWithAccount> {
+  const rows = await db
+    .select({
+      withdrawal: withdrawals,
+      firmName: firms.name,
+      accountLabel: tradingAccounts.label,
+      accountNumber: tradingAccounts.accountNumber,
+    })
+    .from(withdrawals)
+    .innerJoin(tradingAccounts, eq(withdrawals.tradingAccountId, tradingAccounts.id))
+    .innerJoin(firms, eq(tradingAccounts.firmId, firms.id))
+    .where(and(eq(withdrawals.id, withdrawalId), eq(withdrawals.workspaceId, workspaceId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) throw new AppError('NOT_FOUND', 'Withdrawal not found', 404);
+  return mapJoined(row);
 }
 
 export async function getWithdrawalTotals(db: Database, workspaceId: string) {
@@ -78,7 +138,7 @@ export async function createWithdrawal(
   db: Database,
   workspaceId: string,
   input: WithdrawalInput,
-): Promise<Withdrawal> {
+): Promise<WithdrawalWithAccount> {
   const account = await db
     .select()
     .from(tradingAccounts)
@@ -129,37 +189,37 @@ export async function createWithdrawal(
     notes: input.notes?.trim() || null,
   });
 
-  const created = await db.select().from(withdrawals).where(eq(withdrawals.id, id)).limit(1);
-  return created[0]!;
+  return getWithdrawalById(db, workspaceId, id);
 }
 
-export async function updateWithdrawalStatus(
+export async function updateWithdrawal(
   db: Database,
   workspaceId: string,
   withdrawalId: string,
-  next: {
+  input: {
+    amount?: string;
     status: WithdrawalStatus;
+    requestedAt?: Date;
     receivedAt?: Date | null;
     notes?: string | null;
   },
-): Promise<Withdrawal> {
-  const rows = await db
-    .select()
-    .from(withdrawals)
-    .where(and(eq(withdrawals.id, withdrawalId), eq(withdrawals.workspaceId, workspaceId)))
-    .limit(1);
-  const current = rows[0];
-  if (!current) throw new AppError('NOT_FOUND', 'Withdrawal not found', 404);
+): Promise<WithdrawalWithAccount> {
+  const current = await getWithdrawalById(db, workspaceId, withdrawalId);
+
+  if (current.status === 'PAID' && input.status === 'PAID') {
+    // PAID records: only notes may change; use status transition for reverse
+    await db
+      .update(withdrawals)
+      .set({
+        notes: input.notes === undefined ? current.notes : input.notes?.trim() || null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(withdrawals.id, withdrawalId), eq(withdrawals.workspaceId, workspaceId)));
+    return getWithdrawalById(db, workspaceId, withdrawalId);
+  }
 
   try {
-    assertStatusTransition(current.status, next.status);
-    assertWithdrawalInvariants({
-      status: next.status,
-      requestedAt: current.requestedAt,
-      receivedAt: next.status === 'PAID' ? (next.receivedAt ?? current.receivedAt) : null,
-      amount: current.amount,
-      currency: current.currency,
-    });
+    assertStatusTransition(current.status, input.status);
   } catch (error) {
     throw new AppError(
       'BUSINESS_RULE',
@@ -168,23 +228,43 @@ export async function updateWithdrawalStatus(
     );
   }
 
-  // PAID history: do not hard-delete; REVERSED is the unwind path.
+  const requestedAt = input.requestedAt ?? current.requestedAt;
+  const amount = input.amount?.trim() ?? current.amount;
+  const receivedAt = input.status === 'PAID' ? (input.receivedAt ?? current.receivedAt) : null;
+
+  try {
+    assertWithdrawalInvariants({
+      status: input.status,
+      requestedAt,
+      receivedAt,
+      amount,
+      currency: current.currency,
+    });
+  } catch (error) {
+    throw new AppError(
+      'BUSINESS_RULE',
+      error instanceof Error ? error.message : 'Invalid withdrawal',
+      400,
+    );
+  }
+
+  if (current.status !== 'PENDING' && input.amount && input.amount.trim() !== current.amount) {
+    throw new AppError('BUSINESS_RULE', 'Only PENDING withdrawals can change amount', 400);
+  }
+
   await db
     .update(withdrawals)
     .set({
-      status: next.status,
-      receivedAt: next.status === 'PAID' ? (next.receivedAt ?? current.receivedAt) : null,
-      notes: next.notes === undefined ? current.notes : next.notes?.trim() || null,
+      amount,
+      status: input.status,
+      requestedAt,
+      receivedAt,
+      notes: input.notes === undefined ? current.notes : input.notes?.trim() || null,
       updatedAt: new Date(),
     })
     .where(and(eq(withdrawals.id, withdrawalId), eq(withdrawals.workspaceId, workspaceId)));
 
-  const updated = await db
-    .select()
-    .from(withdrawals)
-    .where(eq(withdrawals.id, withdrawalId))
-    .limit(1);
-  return updated[0]!;
+  return getWithdrawalById(db, workspaceId, withdrawalId);
 }
 
 export async function deleteWithdrawalIfAllowed(
@@ -192,13 +272,7 @@ export async function deleteWithdrawalIfAllowed(
   workspaceId: string,
   withdrawalId: string,
 ): Promise<void> {
-  const rows = await db
-    .select()
-    .from(withdrawals)
-    .where(and(eq(withdrawals.id, withdrawalId), eq(withdrawals.workspaceId, workspaceId)))
-    .limit(1);
-  const current = rows[0];
-  if (!current) throw new AppError('NOT_FOUND', 'Withdrawal not found', 404);
+  const current = await getWithdrawalById(db, workspaceId, withdrawalId);
   if (current.status === 'PAID') {
     throw new AppError(
       'BUSINESS_RULE',
