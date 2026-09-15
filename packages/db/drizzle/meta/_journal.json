@@ -64,6 +64,13 @@
       "when": 1789492000000,
       "tag": "0008_backup_records",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789493000000,
+      "tag": "0009_restore_jobs",
+      "breakpoints": true
     }
   ]
 }

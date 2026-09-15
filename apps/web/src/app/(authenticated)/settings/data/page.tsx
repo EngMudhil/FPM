@@ -13,7 +13,9 @@ import {
   TR,
 } from '@fpm/ui';
 import { CreateBackupButton } from '@/components/backup/create-backup-button';
+import { RestorePanel } from '@/components/restore/restore-panel';
 import { listBackupsAction } from '@/server/actions/backup';
+import { listRestoreJobsAction } from '@/server/actions/restore';
 import { EXPORT_MODULES } from '@/server/export/modules';
 
 const labels: Record<(typeof EXPORT_MODULES)[number], string> = {
@@ -26,19 +28,18 @@ const labels: Record<(typeof EXPORT_MODULES)[number], string> = {
 };
 
 export default async function DataSettingsPage() {
-  const backups = await listBackupsAction();
+  const [backups, restores] = await Promise.all([listBackupsAction(), listRestoreJobsAction()]);
 
   return (
     <>
       <PageHeader
         title="Data Management"
-        description="Excel exports and Spec ZIP backups. Restore arrives in FPM-017."
+        description="Excel exports, Spec ZIP backups, and safe restore (ADR-013)."
       />
 
-      <Alert tone="info" title="Backup (FPM-016)">
-        Backups are private workspace ZIP archives (metadata + manifest + JSON entities + Excel +
-        certificate objects). Password hashes, sessions, and secrets are excluded. Full pg_dump is
-        deferred to production ops.
+      <Alert tone="info" title="Backup & restore">
+        Upload never mutates live data. Restore requires typed RESTORE, a one-time token, and a
+        successful pre-restore safety backup. Users/sessions/secrets are never restored from ZIP.
       </Alert>
 
       <Card style={{ marginTop: 20 }}>
@@ -93,12 +94,21 @@ export default async function DataSettingsPage() {
       </Card>
 
       <Card style={{ marginTop: 20 }}>
+        <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>Safe restore</h2>
+        {!restores.ok ? (
+          <EmptyState title="Unable to load restore jobs" description={restores.error.message} />
+        ) : (
+          <RestorePanel jobs={restores.items} />
+        )}
+      </Card>
+
+      <Card style={{ marginTop: 20 }}>
         <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>Download Excel modules</h2>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
-          {EXPORT_MODULES.map((module) => (
-            <li key={module}>
-              <Link href={`/api/exports/${module}`} className="fpm-btn fpm-btn--secondary">
-                Export {labels[module]}
+          {EXPORT_MODULES.map((moduleName) => (
+            <li key={moduleName}>
+              <Link href={`/api/exports/${moduleName}`} className="fpm-btn fpm-btn--secondary">
+                Export {labels[moduleName]}
               </Link>
             </li>
           ))}

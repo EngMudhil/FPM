@@ -20,6 +20,17 @@ export const backupStatusEnum = pgEnum('backup_status', [
   'FAILED',
 ]);
 
+export const restoreJobStatusEnum = pgEnum('restore_job_status', [
+  'UPLOADED',
+  'VALIDATED',
+  'PREVIEW_READY',
+  'CONFIRMING',
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+  'EXPIRED',
+]);
+
 export const accountPhaseEnum = pgEnum('account_phase', ['ACTIVE', 'PAUSED', 'CLOSED']);
 
 export const withdrawalStatusEnum = pgEnum('withdrawal_status', [
@@ -430,6 +441,39 @@ export const backupRecords = pgTable(
   ],
 );
 
+export const restoreJobs = pgTable(
+  'restore_jobs',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    backupRecordId: text('backup_record_id').references(() => backupRecords.id, {
+      onDelete: 'set null',
+    }),
+    uploadedObjectKey: text('uploaded_object_key'),
+    status: restoreJobStatusEnum('status').notNull().default('UPLOADED'),
+    formatVersion: text('format_version'),
+    manifestChecksum: text('manifest_checksum'),
+    preview: jsonb('preview'),
+    exactDiff: jsonb('exact_diff'),
+    errorMessage: text('error_message'),
+    confirmationToken: text('confirmation_token'),
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }),
+    startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' }),
+    completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
+    ...timestamps,
+  },
+  (table) => [
+    index('restore_jobs_workspace_id_idx').on(table.workspaceId),
+    index('restore_jobs_status_idx').on(table.status),
+    index('restore_jobs_expires_at_idx').on(table.expiresAt),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -450,6 +494,8 @@ export type EquitySnapshot = typeof equitySnapshots.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type BackupRecord = typeof backupRecords.$inferSelect;
 export type BackupStatus = (typeof backupStatusEnum.enumValues)[number];
+export type RestoreJob = typeof restoreJobs.$inferSelect;
+export type RestoreJobStatus = (typeof restoreJobStatusEnum.enumValues)[number];
 export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
 export type WithdrawalStatus = (typeof withdrawalStatusEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];
