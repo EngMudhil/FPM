@@ -13,6 +13,13 @@ export const workspaceRoleEnum = pgEnum('workspace_role', ['OWNER', 'ADMIN', 'ME
 
 export const loginEventTypeEnum = pgEnum('login_event_type', ['SUCCESS', 'FAILURE', 'LOCKOUT']);
 
+export const backupStatusEnum = pgEnum('backup_status', [
+  'PENDING',
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+]);
+
 export const accountPhaseEnum = pgEnum('account_phase', ['ACTIVE', 'PAUSED', 'CLOSED']);
 
 export const withdrawalStatusEnum = pgEnum('withdrawal_status', [
@@ -395,6 +402,34 @@ export const auditLogs = pgTable(
   ],
 );
 
+export const backupRecords = pgTable(
+  'backup_records',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    filename: text('filename').notNull(),
+    sizeBytes: text('size_bytes').notNull(),
+    status: backupStatusEnum('status').notNull().default('PENDING'),
+    objectKey: text('object_key'),
+    checksum: text('checksum'),
+    formatVersion: text('format_version').notNull().default('1'),
+    notes: text('notes'),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
+  },
+  (table) => [
+    index('backup_records_workspace_id_idx').on(table.workspaceId),
+    index('backup_records_created_at_idx').on(table.createdAt),
+    index('backup_records_status_idx').on(table.status),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -413,6 +448,8 @@ export type BrokerDeposit = typeof brokerDeposits.$inferSelect;
 export type BrokerWithdrawal = typeof brokerWithdrawals.$inferSelect;
 export type EquitySnapshot = typeof equitySnapshots.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type BackupRecord = typeof backupRecords.$inferSelect;
+export type BackupStatus = (typeof backupStatusEnum.enumValues)[number];
 export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
 export type WithdrawalStatus = (typeof withdrawalStatusEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];
