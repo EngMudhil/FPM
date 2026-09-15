@@ -82,3 +82,34 @@ export const moneyInputSchema = z.object({
 export function parseMoneyInput(input: z.infer<typeof moneyInputSchema>): Money {
   return Money.fromString(input.amount, input.currency);
 }
+
+/**
+ * Display-only formatting for UI. Never use for aggregation authority.
+ * USD → `$8,900` / `$8,900.50`; other codes → `8,900 EUR`.
+ */
+export function formatDisplayMoney(
+  amount: string,
+  currency: string,
+  opts?: { signed?: boolean },
+): string {
+  const code = currencyCodeSchema.parse(currency);
+  const value = new Decimal(amount);
+  const rounded = value.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+  const negative = rounded.isNegative();
+  const abs = rounded.abs();
+  const fixed = abs.toFixed(2);
+  const [intRaw = '0', fracRaw = '00'] = fixed.split('.');
+  const intPart = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const frac = fracRaw === '00' ? '' : `.${fracRaw.replace(/0+$/, '')}`;
+  const core = `${intPart}${frac}`;
+  const sign = opts?.signed ? (negative ? '−' : value.isZero() ? '' : '+') : negative ? '−' : '';
+  if (code === 'USD') return `${sign}$${core}`;
+  return `${sign}${core} ${code}`;
+}
+
+export function formatDisplayPercent(value: string): string {
+  if (value === 'N/A' || value === '—') return value;
+  const cleaned = value.replace(/%/g, '').trim();
+  const d = new Decimal(cleaned);
+  return `${d.toFixed(2)}%`;
+}

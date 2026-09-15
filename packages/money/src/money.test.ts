@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Money, parseMoneyInput } from './index';
+import { Money, parseMoneyInput, formatDisplayMoney, formatDisplayPercent } from './index';
 
 describe('Money', () => {
   it('adds exact decimals without floating error', () => {
@@ -25,5 +25,24 @@ describe('Money', () => {
     const money = parseMoneyInput({ amount: '100.00', currency: 'usd' });
     expect(money.currency).toBe('USD');
     expect(money.isPositive()).toBe(true);
+  });
+});
+
+describe('formatDisplayMoney', () => {
+  it('formats USD with $ and thousands separators', () => {
+    expect(formatDisplayMoney('820000', 'USD')).toBe('$820,000');
+    expect(formatDisplayMoney('8517.5', 'USD')).toBe('$8,517.5');
+    expect(formatDisplayMoney('2966.66666666', 'USD')).toBe('$2,966.67');
+  });
+
+  it('formats non-USD with code suffix', () => {
+    expect(formatDisplayMoney('900', 'EUR')).toBe('900 EUR');
+  });
+});
+
+describe('formatDisplayPercent', () => {
+  it('normalizes percent strings', () => {
+    expect(formatDisplayPercent('28.571')).toBe('28.57%');
+    expect(formatDisplayPercent('N/A')).toBe('N/A');
   });
 });

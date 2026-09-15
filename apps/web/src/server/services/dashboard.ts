@@ -12,7 +12,7 @@ import {
   type Database,
   type WithdrawalStatus,
 } from '@fpm/db';
-import { Money } from '@fpm/money';
+import { Money, formatDisplayMoney, formatDisplayPercent } from '@fpm/money';
 import {
   averageMonthlyIncomeByCurrency,
   averagePayoutByCurrency,
@@ -51,15 +51,22 @@ function toRecord(row: {
 }
 
 function formatMoneyMap(map: Record<string, string>): string {
-  const entries = Object.entries(map);
-  if (entries.length === 0) return '—';
-  return entries.map(([currency, amount]) => `${amount} ${currency}`).join(' · ');
+  const entries = Object.entries(map).filter(([, amount]) => amount !== 'N/A');
+  if (entries.length === 0) {
+    const na = Object.values(map).some((v) => v === 'N/A');
+    return na ? 'N/A' : '—';
+  }
+  return entries.map(([currency, amount]) => formatDisplayMoney(amount, currency)).join(' · ');
 }
 
 function formatPercentMap(map: Record<string, string>): string {
   const entries = Object.entries(map);
   if (entries.length === 0) return '—';
-  return entries.map(([currency, value]) => `${value} (${currency})`).join(' · ');
+  return entries
+    .map(([currency, value]) =>
+      value === 'N/A' ? `N/A (${currency})` : `${formatDisplayPercent(value)} (${currency})`,
+    )
+    .join(' · ');
 }
 
 export type DashboardSnapshot = {
@@ -79,6 +86,8 @@ export type DashboardSnapshot = {
     recognizedPayoutCount: number;
     activeAccountCount: number;
     totalAccountCount: number;
+    firmCount: number;
+    paidWithdrawalCount: number;
     combinedManagedCapital: string;
     combinedGeneratedProfit: string;
   };
@@ -125,6 +134,7 @@ export async function getDashboardSnapshot(
         initialSize: tradingAccounts.initialSize,
         currentSize: tradingAccounts.currentSize,
         currency: tradingAccounts.currency,
+        firmId: tradingAccounts.firmId,
       })
       .from(tradingAccounts)
       .where(and(eq(tradingAccounts.workspaceId, workspaceId), isNull(tradingAccounts.archivedAt))),
@@ -233,7 +243,7 @@ export async function getDashboardSnapshot(
   const best = bestMonthByCurrency(records);
   const bestMonthLabel =
     Object.entries(best)
-      .map(([c, v]) => `${v.month}: ${v.amount} ${c}`)
+      .map(([c, v]) => `${v.month}: ${formatDisplayMoney(v.amount, c)}`)
       .join(' · ') || '—';
 
   return {
@@ -257,12 +267,14 @@ export async function getDashboardSnapshot(
       recognizedPayoutCount: countRecognizedPayouts(records),
       activeAccountCount: phaseDistribution.ACTIVE,
       totalAccountCount: accountRows.length,
+      firmCount: new Set(accountRows.map((a) => a.firmId)).size,
+      paidWithdrawalCount: countWithdrawalsByStatus(withdrawalRows).PAID,
       combinedManagedCapital: combinedCapital
-        ? `${combinedCapital.amount} ${combinedCapital.currency}`
-        : '— (mixed or incomplete)',
+        ? formatDisplayMoney(combinedCapital.amount, combinedCapital.currency)
+        : '—',
       combinedGeneratedProfit: combinedProfit
-        ? `${combinedProfit.amount} ${combinedProfit.currency}`
-        : '— (mixed or incomplete)',
+        ? formatDisplayMoney(combinedProfit.amount, combinedProfit.currency)
+        : '—',
     },
     withdrawalStatusDistribution: countWithdrawalsByStatus(withdrawalRows),
     phaseDistribution,

@@ -29,13 +29,17 @@
   --fpm-metric-teal: #ccfbf1;
   --fpm-metric-purple: #ede9fe;
   --fpm-metric-pink: #fce7f3;
-  --fpm-radius-control: 8px;
-  --fpm-radius-card: 12px;
-  --fpm-radius-dialog: 16px;
+  --fpm-radius-control: 10px;
+  --fpm-radius-card: 16px;
+  --fpm-radius-dialog: 20px;
   --fpm-radius-pill: 999px;
-  --fpm-sidebar-width: 260px;
+  --fpm-sidebar-width: 268px;
+  --fpm-shadow-card:
+    0 1px 2px color-mix(in srgb, #0f172a 4%, transparent),
+    0 8px 24px color-mix(in srgb, #0f172a 5%, transparent);
   --fpm-focus-ring: 0 0 0 3px color-mix(in srgb, var(--fpm-primary) 35%, transparent);
-  --fpm-font: 'Geist', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --fpm-font:
+    var(--fpm-font-loaded), 'Plus Jakarta Sans', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
 }
 
 @media (prefers-reduced-motion: reduce) {

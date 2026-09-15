@@ -8,7 +8,7 @@ describe('fpmTokens', () => {
     expect(fpmTokens.color.background).toBe('#F8FAFC');
     expect(fpmTokens.color.primary).toBe('#2563EB');
     expect(fpmTokens.color.success).toBe('#0D9488');
-    expect(fpmTokens.radius.card).toBe('12px');
+    expect(fpmTokens.radius.card).toBe('16px');
   });
 });
 

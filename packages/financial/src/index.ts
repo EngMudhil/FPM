@@ -376,7 +376,7 @@ export function averagePayoutByCurrency(withdrawals: WithdrawalRecord[]): Record
   const out: Record<string, string> = {};
   for (const [currency, money] of Object.entries(sums)) {
     const n = counts[currency] ?? 0;
-    out[currency] = n === 0 ? 'N/A' : money.amount.div(n).toFixed();
+    out[currency] = n === 0 ? 'N/A' : money.amount.div(n).toFixed(2);
   }
   return out;
 }
@@ -392,7 +392,7 @@ export function averageMonthlyIncomeByCurrency(
   }
   const out: Record<string, string> = {};
   for (const [currency, amount] of Object.entries(lifetime)) {
-    out[currency] = Money.fromString(amount, currency).amount.div(months).toFixed();
+    out[currency] = Money.fromString(amount, currency).amount.div(months).toFixed(2);
   }
   return out;
 }
