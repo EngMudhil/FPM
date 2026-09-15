@@ -17,20 +17,21 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-003 | Application / Database Foundation | PASS | 11e9166 · PR #1 merged |
 | FPM-004 | Design System Baseline | PASS | 3b7e9ac · PR #2 merged |
 | FPM-005 | Firms | PASS | e390e20 · PR #3 merged |
-| FPM-006 | Funded Accounts | PASS | See completion record (this branch) |
+| FPM-006 | Funded Accounts | PASS | 4eede63 · PR #4 merged |
+| FPM-007 | Withdrawal Engine | PASS | See completion record (this branch) |
 
-### FPM-006 completion
+### FPM-007 completion
 
 * **Date:** 2026-09-15
-* **Summary:** `trading_accounts` with phases ACTIVE/PAUSED/CLOSED, numeric sizes, currency, firm restrict FK, identity display helper, list filters, CRUD + archive
-* **Migration:** `0002_trading_accounts.sql`
-* **Deferred:** Withdrawal/scale history on detail (FPM-007/010)
+* **Summary:** `@fpm/financial` recognition/pending/transition rules; `withdrawals` table; server service enforcing PAID+receivedAt, no PAID delete, currency match account
+* **Migration:** `0003_withdrawals.sql`
+* **Deferred:** Withdrawal UI (FPM-008)
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-007 | Withdrawal Engine | Financial + Backend + Database | FPM-006 | Domain rules; PAID+receivedAt; statuses; tests | Lead + QA + Security | Domain services |
+| FPM-008 | Withdrawal UI | Frontend + Backend | FPM-007 | Manual record E2E; CTA | Lead + QA | `/withdrawals/*` |
 | FPM-006 | Funded Accounts | Frontend + Backend | FPM-005 | CRUD+detail; phases; identity UX | Lead + QA | `/accounts/*` |
 | FPM-007 | Withdrawal Engine | Financial + Backend + Database | FPM-006 | Domain rules; PAID+receivedAt; statuses; tests | Lead + QA + Security | Domain services |
 | FPM-008 | Withdrawal UI | Frontend + Backend | FPM-007 | Manual record E2E; CTA | Lead + QA | `/withdrawals/*` |

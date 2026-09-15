@@ -38,6 +38,9 @@ importers:
       '@fpm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@fpm/financial':
+        specifier: workspace:*
+        version: link:../../packages/financial
       '@fpm/money':
         specifier: workspace:*
         version: link:../../packages/money
@@ -141,6 +144,28 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.23.13
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.2)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/financial:
+    dependencies:
+      '@fpm/money':
+        specifier: workspace:*
+        version: link:../money
+      decimal.js:
+        specifier: ^10.4.3
+        version: 10.6.0
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@fpm/config':
+        specifier: workspace:*
+        version: link:../config
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
