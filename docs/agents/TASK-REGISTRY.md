@@ -27,24 +27,23 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-013 | Excel Export | PASS | b481f5a · PR #11 merged |
 | FPM-014 | Broker Accounts | PASS | 1e12039 · PR #12 merged |
 | FPM-015 | Audit | PASS | b7b4b60 · PR #13 merged |
-| FPM-016 | Backup | PASS | See completion record (this branch) |
+| FPM-016 | Backup | PASS | 1907857 · PR #14 merged |
+| FPM-017 | Restore | PASS | See completion record (this branch) |
 
-### FPM-016 completion
+### FPM-017 completion
 
 * **Date:** 2026-09-15
-* **Summary:** Spec ZIP v1 backups (metadata/manifest/json/excel/uploads); `backup_records` status tracking; private local storage; no secrets; SQL dump placeholder
-* **Migration:** `0008_backup_records.sql`
-* **Deferred:** durable worker queue; full pg_dump (FPM-018); restore (FPM-017)
+* **Summary:** restore_jobs; ZIP Slip/checksum/format validation; preview; typed RESTORE + one-time token; pre-restore safety backup; single-txn replace (ADR-013); cert object restore
+* **Migration:** `0009_restore_jobs.sql`
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-017 | Restore | DevOps + Database + Security | FPM-016 | Spec-safe restore | Security + Lead + QA | Restore jobs |
 | FPM-018 | Production Deployment | DevOps | Stable CORE+ops | Caddy/Docker/VPS docs+config | Security + Lead | Deploy artifacts |
 | FPM-019 | Full QA | QA | Feature set | Cross e2e/a11y/financial suite | Lead | QA report |
 | FPM-020 | MT5 Integration | Architecture + Backend + Security | After CORE | Spike/ADR update only until approved | Security + Lead | Spike report |
 
 ## Recommended next task
 
-**FPM-017 — Restore** (after FPM-016 PASS)
+**FPM-018 — Production Deployment** (after FPM-017 PASS)

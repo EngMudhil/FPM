@@ -18,7 +18,7 @@ Owner: Lead (escalation).
 | OQ-011 | Missing `5.png` | Possible unknown screen | Design | Lead | Non-blocking |
 | OQ-012 | Combined funded+real cards | Dashboard | Financial | Financial + Lead | Non-blocking if deferred |
 | OQ-013 | ~~Object storage provider~~ | Certs/backups | DevOps | DevOps + Security | **Partial (FPM-009): local private FS + ADR-010; S3 provider still open for prod** |
-| OQ-014 | Restore staging vs single transaction | Restore safety | DevOps, Database | Architecture + DevOps | Blocking for FPM-017 |
+| OQ-014 | ~~Restore staging vs single transaction~~ | — | — | — | **Resolved (FPM-017 / ADR-013): single transaction + safety backup + advisory lock** |
 | OQ-015 | ~~Broker EquitySnapshot lifecycle~~ | — | — | — | **Resolved (FPM-014 / ADR-012): reject duplicate account+snapshotDate** |
 | OQ-016 | ~~Confirm ScaleEvent resync rule~~ | — | — | — | **Resolved (FPM-010 / ADR-011): latest toSize by scaledAt/id; else initialSize; txn with toSize>fromSize** |
 | OQ-017 | Inclusive month count for avg/month | Avg/month metric | Financial | Financial + Lead | Blocking if metric shipped |
