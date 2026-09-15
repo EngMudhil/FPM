@@ -42,7 +42,7 @@ Private volumes: certificates, backups
 
 ## Deferred / follow-ups
 
-* Object storage (S3) for certificates/backups (OQ-013 prod).
+* S3-compatible object storage remains **FUTURE** (ADR-015) — VPS private volumes are production for certs/backups.
 * Dedicated worker process for long backup/restore jobs.
 * Full `pg_dump` in backup ZIP (SQL placeholder today).
 * Observability (metrics/log shipping) and automated CI deploy.

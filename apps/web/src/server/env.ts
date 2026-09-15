@@ -11,7 +11,7 @@ const serverEnvSchema = z.object({
     .int()
     .positive()
     .default(60 * 60 * 2),
-  /** Private certificate object root (local filesystem for FPM-009; S3 later). */
+  /** Private certificate object root (local FS; ADR-015 production for VPS). */
   CERTIFICATE_STORAGE_PATH: z.string().min(1).default('.data/certificates'),
 });
 

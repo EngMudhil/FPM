@@ -29,7 +29,7 @@ Routes follow Spec §4 (CURRENT DECISION). Screenshot labels mapped to Spec navi
 | Account/security settings | `/settings/security` | Profile, password, login history | User meta, login table | Save, change password | Auth | 22–23 | Map from “Account Settings” | CORE |
 | Data management | `/settings/data-management` | Export/backup/restore | Export cards, backup table | Generate, restore | Ops | 24–25 | Spec-safe restore UX | SECONDARY |
 | Audit log | `/settings/audit-log` | Audit trail | Filters, JSON details | Export CSV | Audit | 26 | Human-readable details | SECONDARY |
-| Workspace / members | `/settings/workspace`, `/settings/members` | Roles | Members, timezone, currency | Invite/role | Workspace | Spec only | After OWNER seed | SECONDARY/FUTURE |
+| Workspace / members | `/settings/workspace`, `/settings/members` | Roles | Members, timezone, currency | Invite/role | Workspace | Spec | ADR-015 | SECONDARY (shipped FPM-022) |
 
 ## Design requirements (document only — no redesign now)
 
