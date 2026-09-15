@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Funded Portfolio Manager',
-  description: 'Private funded-trader portfolio management system (foundation phase)',
+  description: 'Private funded-trader portfolio management system',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

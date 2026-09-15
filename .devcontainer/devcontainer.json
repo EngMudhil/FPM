@@ -5,13 +5,13 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "forwardPorts": [3000, 5432, 6379],
+  "forwardPorts": [3000, 5433, 6379],
   "portsAttributes": {
     "3000": {
       "label": "Next.js",
       "onAutoForward": "notify"
     },
-    "5432": {
+    "5433": {
       "label": "PostgreSQL"
     },
     "6379": {
