@@ -8,6 +8,14 @@ The **Lead Agent** (`.agents/lead/AGENT.md`) coordinates the project. Specialist
 
 Repository documentation (`docs/`, ADRs, approved requirements) is the project memory and source of truth.
 
+Before implementing features, agents must consult:
+
+```text
+AGENTS.md
++ docs/FPM-MASTER-BLUEPRINT.md
++ relevant module documentation
+```
+
 ## Project Rule
 
 FPM is developed through controlled, registered tasks. Work only on assigned task scope.
