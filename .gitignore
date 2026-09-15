@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Local toolchain (not committed)
+.tools/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Test / coverage
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.nyc_output/
+
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.turbo/
+.cache/
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets/

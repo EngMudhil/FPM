@@ -1,0 +1,32 @@
+{
+  "name": "funded-portfolio-manager",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Funded Portfolio Manager (FPM) — private financial/portfolio-management system",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @fpm/web dev",
+    "build": "pnpm --filter @fpm/web build",
+    "start": "pnpm --filter @fpm/web start",
+    "lint": "eslint packages --max-warnings=0 && pnpm --filter @fpm/web lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @fpm/web test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2"
+  }
+}

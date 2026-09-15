@@ -1,0 +1,11 @@
+{
+  "extends": "@fpm/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "react-jsx",
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}
