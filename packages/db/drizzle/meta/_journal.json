@@ -29,6 +29,13 @@
       "when": 1789487000000,
       "tag": "0003_withdrawals",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789488000000,
+      "tag": "0004_certificates",
+      "breakpoints": true
     }
   ]
 }

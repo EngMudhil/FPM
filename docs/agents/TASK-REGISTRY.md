@@ -19,19 +19,21 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-005 | Firms | PASS | e390e20 · PR #3 merged |
 | FPM-006 | Funded Accounts | PASS | 4eede63 · PR #4 merged |
 | FPM-007 | Withdrawal Engine | PASS | 8e99706 · PR #5 merged |
-| FPM-008 | Withdrawal UI | PASS | See completion record (this branch) |
+| FPM-008 | Withdrawal UI | PASS | a5b55f8 · PR #6 merged |
+| FPM-009 | Certificates | PASS | See completion record (this branch) |
 
-### FPM-008 completion
+### FPM-009 completion
 
 * **Date:** 2026-09-15
-* **Summary:** Withdrawals list/filter with currency-safe totals, record/edit/detail UI; Paid/Received → receivedAt; PAID delete blocked in UI
-* **Deferred:** Certificate attach from withdrawal detail (FPM-009)
+* **Summary:** certificates table; private local storage (ADR-010); magic-byte + 10MB validation; auth file route; gallery/upload/detail/edit; delete cleans object
+* **Migration:** `0004_certificates.sql`
+* **Deferred:** S3 provider (OQ-013 prod); restore of objects (FPM-017)
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-009 | Certificates | Frontend + Backend + DevOps + Security | FPM-008 | Private upload; link withdrawal | Security + Lead + QA | `/certificates/*` |
+| FPM-010 | Scale Events | Frontend + Backend + Financial | FPM-006 | toSize>fromSize; txn currentSize | Lead + QA | `/scale-events/*` |
 | FPM-006 | Funded Accounts | Frontend + Backend | FPM-005 | CRUD+detail; phases; identity UX | Lead + QA | `/accounts/*` |
 | FPM-007 | Withdrawal Engine | Financial + Backend + Database | FPM-006 | Domain rules; PAID+receivedAt; statuses; tests | Lead + QA + Security | Domain services |
 | FPM-008 | Withdrawal UI | Frontend + Backend | FPM-007 | Manual record E2E; CTA | Lead + QA | `/withdrawals/*` |
