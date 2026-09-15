@@ -24,19 +24,19 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-010 | Scale Events | PASS | 3e60a59 · PR #8 merged |
 | FPM-011 | Dashboard | PASS | e1ad878 · PR #9 merged |
 | FPM-012 | Reports | PASS | c0b3ccc · PR #10 merged |
-| FPM-013 | Excel Export | PASS | See completion record (this branch) |
+| FPM-013 | Excel Export | PASS | b481f5a · PR #11 merged |
+| FPM-014 | Broker Accounts | PASS | See completion record (this branch) |
 
-### FPM-013 completion
+### FPM-014 completion
 
 * **Date:** 2026-09-15
-* **Summary:** Injection-safe `.xlsx` exports (exceljs) for firms, accounts, withdrawals, scale events, certificates, dashboard summary; Settings → Data download links; money as decimal strings
-* **Deferred:** Broker module exports (FPM-014); background jobs for huge datasets
+* **Summary:** brokers + broker_accounts + deposits/withdrawals + equity_snapshots; net deposited + latest equity via Financial Domain; duplicate snapshots rejected (ADR-012); P/L+ROI deferred (OQ-003)
+* **Migration:** `0006_broker_domain.sql`
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-014 | Broker Accounts | Frontend + Backend + Financial | FPM-003+ | Full real domain slice | Lead + QA + Database | `/broker-accounts/*` |
 | FPM-015 | Audit | Backend + Frontend + Security | Mutations instrumented | Append-only audit UI | Security + Lead | `/settings/audit-log` |
 | FPM-016 | Backup | DevOps + Backend | Storage | Spec ZIP format + job | Security + Lead | Backup jobs |
 | FPM-017 | Restore | DevOps + Database + Security | FPM-016 | Spec-safe restore | Security + Lead + QA | Restore jobs |
@@ -46,4 +46,4 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 
 ## Recommended next task
 
-**FPM-014 — Broker Accounts** (after FPM-013 PASS)
+**FPM-015 — Audit** (after FPM-014 PASS)
