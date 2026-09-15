@@ -21,20 +21,19 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-007 | Withdrawal Engine | PASS | 8e99706 · PR #5 merged |
 | FPM-008 | Withdrawal UI | PASS | a5b55f8 · PR #6 merged |
 | FPM-009 | Certificates | PASS | 90369ca · PR #7 merged |
-| FPM-010 | Scale Events | PASS | See completion record (this branch) |
+| FPM-010 | Scale Events | PASS | 3e60a59 · PR #8 merged |
+| FPM-011 | Dashboard | PASS | See completion record (this branch) |
 
-### FPM-010 completion
+### FPM-011 completion
 
 * **Date:** 2026-09-15
-* **Summary:** scale_events table; Spec `toSize`>`fromSize`; transactional `currentSize` resync (ADR-011 / OQ-016); list/new/detail/edit/delete
-* **Migration:** `0005_scale_events.sql`
-* **Domain:** `@fpm/financial` assertScaleSizes + resolveCurrentSizeFromScaleEvents
+* **Summary:** Funded dashboard consuming `@fpm/financial` only for money metrics; CTA Log Withdrawal; period cards by `receivedAt` (UTC month); pending; status/phase distributions; recent withdrawals & scale events
+* **Deferred:** funded capital (OQ-001), avg/growth/yield (OQ-002), broker section (FPM-014)
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-011 | Dashboard | Frontend + Financial | FPM-007+ | Domain-only metrics; no invented formulas | Lead + QA | `/dashboard` |
 | FPM-012 | Reports | Frontend + Financial | FPM-007 | Period reports; currency-safe | Lead + QA | `/reports` |
 | FPM-013 | Excel Export | Backend + QA | Core modules | Injection-safe exports | Lead + QA | Export actions |
 | FPM-014 | Broker Accounts | Frontend + Backend + Financial | FPM-003+ | Full real domain slice | Lead + QA + Database | `/broker-accounts/*` |
@@ -47,4 +46,4 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 
 ## Recommended next task
 
-**FPM-011 — Dashboard** (after FPM-010 PASS)
+**FPM-012 — Reports** (after FPM-011 PASS)

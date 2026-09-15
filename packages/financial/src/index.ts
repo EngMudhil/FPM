@@ -81,6 +81,62 @@ export function sumPendingByCurrency(withdrawals: WithdrawalRecord[]): Record<st
   );
 }
 
+/** Count of recognized payouts (PAID + receivedAt). */
+export function countRecognizedPayouts(withdrawals: WithdrawalRecord[]): number {
+  return withdrawals.filter(isRecognizedPayout).length;
+}
+
+/**
+ * Sum recognized payouts whose receivedAt falls in [startInclusive, endExclusive).
+ * Period edges are caller-supplied (workspace timezone → UTC instants).
+ */
+export function sumRecognizedInRange(
+  withdrawals: WithdrawalRecord[],
+  startInclusive: Date,
+  endExclusive: Date,
+): Record<string, string> {
+  const startMs = startInclusive.getTime();
+  const endMs = endExclusive.getTime();
+  return sumRecognizedByCurrency(
+    withdrawals.filter((row) => {
+      if (!isRecognizedPayout(row) || !row.receivedAt) return false;
+      const t = row.receivedAt.getTime();
+      return t >= startMs && t < endMs;
+    }),
+  );
+}
+
+/** UTC calendar-month bounds [start, end) for period payout cards. */
+export function utcMonthBounds(reference: Date = new Date()): {
+  thisMonth: { start: Date; end: Date };
+  lastMonth: { start: Date; end: Date };
+} {
+  const y = reference.getUTCFullYear();
+  const m = reference.getUTCMonth();
+  const thisStart = new Date(Date.UTC(y, m, 1, 0, 0, 0, 0));
+  const thisEnd = new Date(Date.UTC(y, m + 1, 1, 0, 0, 0, 0));
+  const lastStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
+  return {
+    thisMonth: { start: thisStart, end: thisEnd },
+    lastMonth: { start: lastStart, end: thisStart },
+  };
+}
+
+export function countWithdrawalsByStatus(
+  withdrawals: Array<{ status: WithdrawalStatus }>,
+): Record<WithdrawalStatus, number> {
+  const counts: Record<WithdrawalStatus, number> = {
+    PENDING: 0,
+    PAID: 0,
+    FAILED: 0,
+    REVERSED: 0,
+  };
+  for (const row of withdrawals) {
+    counts[row.status] += 1;
+  }
+  return counts;
+}
+
 /** Spec §8: scale toSize must exceed fromSize (strict). */
 export function assertScaleSizes(input: {
   fromSize: string;
