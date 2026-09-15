@@ -6,6 +6,13 @@ export const loginEventTypeEnum = pgEnum('login_event_type', ['SUCCESS', 'FAILUR
 
 export const accountPhaseEnum = pgEnum('account_phase', ['ACTIVE', 'PAUSED', 'CLOSED']);
 
+export const withdrawalStatusEnum = pgEnum('withdrawal_status', [
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'REVERSED',
+]);
+
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
@@ -150,6 +157,33 @@ export const tradingAccounts = pgTable(
   ],
 );
 
+export const withdrawals = pgTable(
+  'withdrawals',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    tradingAccountId: text('trading_account_id')
+      .notNull()
+      .references(() => tradingAccounts.id, { onDelete: 'restrict' }),
+    amount: numeric('amount', { precision: 20, scale: 8 }).notNull(),
+    currency: text('currency').notNull(),
+    status: withdrawalStatusEnum('status').notNull().default('PENDING'),
+    requestedAt: timestamp('requested_at', { withTimezone: true, mode: 'date' }).notNull(),
+    receivedAt: timestamp('received_at', { withTimezone: true, mode: 'date' }),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('withdrawals_workspace_id_idx').on(table.workspaceId),
+    index('withdrawals_trading_account_id_idx').on(table.tradingAccountId),
+    index('withdrawals_status_idx').on(table.status),
+    index('withdrawals_received_at_idx').on(table.receivedAt),
+    index('withdrawals_requested_at_idx').on(table.requestedAt),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -159,5 +193,7 @@ export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Firm = typeof firms.$inferSelect;
 export type TradingAccount = typeof tradingAccounts.$inferSelect;
+export type Withdrawal = typeof withdrawals.$inferSelect;
 export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
+export type WithdrawalStatus = (typeof withdrawalStatusEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];
