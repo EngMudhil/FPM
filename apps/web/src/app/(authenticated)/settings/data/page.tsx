@@ -1,5 +1,19 @@
 import Link from 'next/link';
-import { Alert, Card, PageHeader } from '@fpm/ui';
+import {
+  Alert,
+  Badge,
+  Card,
+  EmptyState,
+  PageHeader,
+  Table,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+} from '@fpm/ui';
+import { CreateBackupButton } from '@/components/backup/create-backup-button';
+import { listBackupsAction } from '@/server/actions/backup';
 import { EXPORT_MODULES } from '@/server/export/modules';
 
 const labels: Record<(typeof EXPORT_MODULES)[number], string> = {
@@ -11,22 +25,75 @@ const labels: Record<(typeof EXPORT_MODULES)[number], string> = {
   'dashboard-summary': 'Dashboard Summary',
 };
 
-export default function DataSettingsPage() {
+export default async function DataSettingsPage() {
+  const backups = await listBackupsAction();
+
   return (
     <>
       <PageHeader
         title="Data Management"
-        description="Export workspace modules to Excel. Backup/restore arrive in FPM-016/017."
+        description="Excel exports and Spec ZIP backups. Restore arrives in FPM-017."
       />
 
-      <Alert tone="info" title="Excel export (FPM-013)">
-        Exports include styled headers, autofilter, frozen header row, and formula-injection
-        protection for text cells. Money amounts stay as exact decimal strings (no float coercion).
-        Broker exports deferred to FPM-014.
+      <Alert tone="info" title="Backup (FPM-016)">
+        Backups are private workspace ZIP archives (metadata + manifest + JSON entities + Excel +
+        certificate objects). Password hashes, sessions, and secrets are excluded. Full pg_dump is
+        deferred to production ops.
       </Alert>
 
       <Card style={{ marginTop: 20 }}>
-        <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>Download modules</h2>
+        <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>Workspace backup</h2>
+        <CreateBackupButton />
+        {!backups.ok ? (
+          <EmptyState title="Unable to load backups" description={backups.error.message} />
+        ) : backups.items.length === 0 ? (
+          <p style={{ marginTop: 16, color: 'var(--fpm-text-muted)' }}>No backups yet.</p>
+        ) : (
+          <div style={{ marginTop: 16 }}>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Created</TH>
+                  <TH>Status</TH>
+                  <TH>Size</TH>
+                  <TH>Download</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {backups.items.map((row) => (
+                  <TR key={row.id}>
+                    <TD>{row.createdAt.toISOString()}</TD>
+                    <TD>
+                      <Badge
+                        tone={
+                          row.status === 'COMPLETED'
+                            ? 'success'
+                            : row.status === 'FAILED'
+                              ? 'danger'
+                              : 'warning'
+                        }
+                      >
+                        {row.status}
+                      </Badge>
+                    </TD>
+                    <TD>{row.sizeBytes} bytes</TD>
+                    <TD>
+                      {row.status === 'COMPLETED' ? (
+                        <Link href={`/api/backups/${row.id}`}>Download ZIP</Link>
+                      ) : (
+                        '—'
+                      )}
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </div>
+        )}
+      </Card>
+
+      <Card style={{ marginTop: 20 }}>
+        <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>Download Excel modules</h2>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
           {EXPORT_MODULES.map((module) => (
             <li key={module}>

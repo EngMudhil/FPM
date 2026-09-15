@@ -57,6 +57,13 @@
       "when": 1789491000000,
       "tag": "0007_audit_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789492000000,
+      "tag": "0008_backup_records",
+      "breakpoints": true
     }
   ]
 }
