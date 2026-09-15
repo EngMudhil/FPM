@@ -184,6 +184,32 @@ export const withdrawals = pgTable(
   ],
 );
 
+export const certificates = pgTable(
+  'certificates',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'restrict' }),
+    withdrawalId: text('withdrawal_id')
+      .notNull()
+      .references(() => withdrawals.id, { onDelete: 'restrict' }),
+    title: text('title'),
+    issuedAt: timestamp('issued_at', { withTimezone: true, mode: 'date' }),
+    objectKey: text('object_key').notNull(),
+    originalFilename: text('original_filename').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: text('size_bytes').notNull(),
+    checksum: text('checksum').notNull(),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [
+    index('certificates_workspace_id_idx').on(table.workspaceId),
+    index('certificates_withdrawal_id_idx').on(table.withdrawalId),
+  ],
+);
+
 /** Re-export numeric helper type usage for future money columns (precision 20, scale 8). */
 export const moneyNumeric = numeric;
 
@@ -194,6 +220,7 @@ export type Session = typeof sessions.$inferSelect;
 export type Firm = typeof firms.$inferSelect;
 export type TradingAccount = typeof tradingAccounts.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
+export type Certificate = typeof certificates.$inferSelect;
 export type AccountPhase = (typeof accountPhaseEnum.enumValues)[number];
 export type WithdrawalStatus = (typeof withdrawalStatusEnum.enumValues)[number];
 export type WorkspaceRole = (typeof workspaceRoleEnum.enumValues)[number];

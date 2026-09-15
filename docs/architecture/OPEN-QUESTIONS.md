@@ -17,7 +17,7 @@ Owner: Lead (escalation).
 | OQ-010 | When to ship members UI | Scope | Auth, Settings | Lead | Non-blocking |
 | OQ-011 | Missing `5.png` | Possible unknown screen | Design | Lead | Non-blocking |
 | OQ-012 | Combined funded+real cards | Dashboard | Financial | Financial + Lead | Non-blocking if deferred |
-| OQ-013 | Object storage provider | Certs/backups | DevOps | DevOps + Security | Blocking for cert/backup |
+| OQ-013 | ~~Object storage provider~~ | Certs/backups | DevOps | DevOps + Security | **Partial (FPM-009): local private FS + ADR-010; S3 provider still open for prod** |
 | OQ-014 | Restore staging vs single transaction | Restore safety | DevOps, Database | Architecture + DevOps | Blocking for FPM-017 |
 | OQ-015 | Broker EquitySnapshot lifecycle | Broker history | Broker, Database | Architecture + Lead | Blocking for FPM-014 |
 | OQ-016 | Confirm ScaleEvent resync rule | Account size | Scale, Financial | Financial + Lead | Blocking for FPM-010 |

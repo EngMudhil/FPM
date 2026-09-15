@@ -11,6 +11,8 @@ const serverEnvSchema = z.object({
     .int()
     .positive()
     .default(60 * 60 * 2),
+  /** Private certificate object root (local filesystem for FPM-009; S3 later). */
+  CERTIFICATE_STORAGE_PATH: z.string().min(1).default('.data/certificates'),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
