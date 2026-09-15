@@ -15,8 +15,12 @@ export type MetricCardProps = {
   label: string;
   value: string;
   helper?: string;
+  helperTone?: 'danger' | 'muted';
   tone?: MetricTone;
   icon?: ReactNode;
+  badge?: ReactNode;
+  headerRight?: ReactNode;
+  accentValue?: boolean;
   className?: string;
 };
 
@@ -24,16 +28,36 @@ export function MetricCard({
   label,
   value,
   helper,
+  helperTone = 'muted',
   tone = 'neutral',
   icon,
+  badge,
+  headerRight,
+  accentValue = false,
   className,
 }: MetricCardProps) {
   return (
     <div className={cn('fpm-metric-card', `fpm-metric-card--${tone}`, className)}>
-      {icon ? <div className="fpm-metric-card__icon">{icon}</div> : null}
+      <div className="fpm-metric-card__top">
+        {icon ? <div className="fpm-metric-card__icon">{icon}</div> : <span />}
+        {badge ?? headerRight ?? null}
+      </div>
       <div className="fpm-metric-card__label">{label}</div>
-      <div className="fpm-metric-card__value">{value}</div>
-      {helper ? <div className="fpm-metric-card__helper">{helper}</div> : null}
+      <div
+        className={cn('fpm-metric-card__value', accentValue && 'fpm-metric-card__value--accent')}
+      >
+        {value}
+      </div>
+      {helper ? (
+        <div
+          className={cn(
+            'fpm-metric-card__helper',
+            helperTone === 'danger' && 'fpm-metric-card__helper--danger',
+          )}
+        >
+          {helper}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -176,13 +176,21 @@
 .fpm-metric-card {
   border: 1px solid color-mix(in srgb, var(--fpm-border) 70%, transparent);
   border-radius: var(--fpm-radius-card);
-  padding: 18px 18px 16px;
+  padding: 16px 16px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 132px;
+  min-height: 140px;
   box-shadow: var(--fpm-shadow-card);
   position: relative;
+}
+
+.fpm-metric-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
 }
 
 .fpm-metric-card__icon {
@@ -192,7 +200,6 @@
   display: grid;
   place-items: center;
   font-size: 16px;
-  margin-bottom: 4px;
   background: color-mix(in srgb, #0f172a 6%, transparent);
   color: var(--fpm-text-secondary);
 }
@@ -214,10 +221,58 @@
   letter-spacing: -0.02em;
 }
 
+.fpm-metric-card--yellow .fpm-metric-card__value--accent,
+.fpm-metric-card--orange .fpm-metric-card__value--accent {
+  color: #9a3412;
+}
+.fpm-metric-card--green .fpm-metric-card__value--accent,
+.fpm-metric-card--teal .fpm-metric-card__value--accent {
+  color: #166534;
+}
+.fpm-metric-card--purple .fpm-metric-card__value--accent {
+  color: #5b21b6;
+}
+.fpm-metric-card--pink .fpm-metric-card__value--accent {
+  color: #9f1239;
+}
+
 .fpm-metric-card__helper {
   font-size: 12px;
   color: var(--fpm-text-muted);
   margin-top: auto;
+}
+
+.fpm-metric-card__helper--danger {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.fpm-metric-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fecdd3;
+  color: #be123c;
+}
+
+.fpm-metric-card__nav {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.fpm-metric-card__nav span {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--fpm-text-muted);
+  background: color-mix(in srgb, #0f172a 5%, transparent);
 }
 
 .fpm-metric-card--yellow {

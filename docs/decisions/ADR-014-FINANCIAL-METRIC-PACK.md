@@ -45,7 +45,10 @@ If no equity snapshot exists, P/L and ROI are **N/A**.
 | Metric | Formula |
 | --- | --- |
 | Peak equity | max `equity` among snapshots; ties → latest `snapshotDate`, then `id` |
-| Drawdown | `(peak − latestEquity) / peak × 100`; **N/A** if no snapshots or peak = 0 |
+| Drawdown % | `(peak − latestEquity) / peak × 100`; **N/A** if no snapshots or peak = 0 |
+| Trading drawdown (dashboard $) | `max(0, peak − (latestEquity + SUM(broker withdrawals)))` money amount; labeled **excl. withdrawals** (reference UI) |
+
+Rationale for dollar drawdown: cash removed via withdrawal is not trading loss; reference screenshots show `$0.00` when the equity drop equals withdrawals.
 
 ### OQ-006 — Duplicate equity dates
 

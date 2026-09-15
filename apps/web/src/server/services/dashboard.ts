@@ -22,7 +22,7 @@ import {
   combineSameCurrencyMaps,
   countRecognizedPayouts,
   countWithdrawalsByStatus,
-  equityDrawdownPercent,
+  equityDrawdownAmountExclWithdrawals,
   incomeYieldByCurrency,
   isRecognizedPayout,
   peakEquity,
@@ -157,6 +157,7 @@ export type DashboardSnapshot = {
     currentRealEquity: string;
     brokerNetPl: string;
     brokerRoi: string;
+    brokerRoiHero: string;
     totalDeposits: string;
     totalBrokerWithdrawals: string;
     peakEquity: string;
@@ -364,9 +365,8 @@ export async function getDashboardSnapshot(
   if (tenureStart) {
     const months =
       (now.getUTCFullYear() - tenureStart.getUTCFullYear()) * 12 +
-      (now.getUTCMonth() - tenureStart.getUTCMonth()) +
-      1;
-    businessTenure = `${Math.max(months, 1)} mo`;
+      (now.getUTCMonth() - tenureStart.getUTCMonth());
+    businessTenure = `${Math.max(months, 0)} mo`;
     businessTenureHelper = `Since ${tenureStart.toLocaleString('en-US', {
       month: 'short',
       year: 'numeric',
@@ -504,9 +504,10 @@ export async function getDashboardSnapshot(
 
   const peak = peakEquity(peakCandidates.filter((p) => p.currency === currency));
   const latestEquityStr = totalEquity.amount.isZero() ? null : totalEquity.toString();
-  const drawdown = equityDrawdownPercent({
+  const drawdownAmount = equityDrawdownAmountExclWithdrawals({
     peakEquity: peak?.equity ?? null,
     latestEquity: latestEquityStr,
+    withdrawalsTotal: totalBrokerWd.toString(),
     currency,
   });
 
@@ -532,6 +533,10 @@ export async function getDashboardSnapshot(
   const avgPayoutMap = averagePayoutByCurrency(records);
   const avgMonthlyMap = averageMonthlyIncomeByCurrency(records, now);
 
+  const yieldRaw = yieldMap[currency];
+  const incomeYieldDisplay =
+    !yieldRaw || yieldRaw === 'N/A' ? '—' : formatYieldOneDecimal(yieldRaw);
+
   const asOfLabel = now
     .toLocaleDateString('en-US', {
       month: 'short',
@@ -540,6 +545,9 @@ export async function getDashboardSnapshot(
       timeZone: 'UTC',
     })
     .toUpperCase();
+
+  const brokerRoiPrecise = roi === 'N/A' ? 'N/A' : formatDisplayPercent(roi);
+  const brokerRoiHero = roi === 'N/A' ? 'N/A' : formatPercentOneDecimal(roi);
 
   return {
     asOfLabel,
@@ -561,7 +569,7 @@ export async function getDashboardSnapshot(
       lifetime: formatMoneyMap(lifetime),
       lifetimeHelper: `${countRecognizedPayouts(records)} paid payouts`,
       averageMonthly: formatMoneyMap(avgMonthlyMap),
-      incomeYield: formatPercentMap(yieldMap).replace(` (${currency})`, ''),
+      incomeYield: incomeYieldDisplay,
       averagePayout: formatMoneyMap(avgPayoutMap),
       largestWithdrawal: largestAmount.amount.isZero()
         ? '—'
@@ -582,19 +590,13 @@ export async function getDashboardSnapshot(
       brokerAccountCount: brokerAccountRows.length,
       currentRealEquity: formatDisplayMoney(totalEquity.toString(), currency),
       brokerNetPl: formatDisplayMoney(totalPnl.toString(), currency, { signed: true }),
-      brokerRoi: roi === 'N/A' ? 'N/A' : formatDisplayPercent(roi),
+      brokerRoi: brokerRoiPrecise,
+      brokerRoiHero,
       totalDeposits: formatDisplayMoney(totalDeposits.toString(), currency),
       totalBrokerWithdrawals: formatDisplayMoney(totalBrokerWd.toString(), currency),
       peakEquity: peak ? formatDisplayMoney(peak.equity, currency) : '—',
       tradingDrawdown:
-        drawdown === 'N/A'
-          ? 'N/A'
-          : formatDisplayMoney(
-              Money.fromString(peak?.equity ?? '0', currency)
-                .amount.minus(Money.fromString(latestEquityStr ?? '0', currency).amount)
-                .toFixed(2),
-              currency,
-            ),
+        drawdownAmount === 'N/A' ? 'N/A' : formatDisplayMoney(drawdownAmount, currency),
       combinedManagedCapital: combinedCapital
         ? formatDisplayMoney(combinedCapital.amount, combinedCapital.currency)
         : '—',
@@ -638,12 +640,19 @@ export async function getDashboardSnapshot(
   };
 }
 
-function formatPercentMap(map: Record<string, string>): string {
-  const entries = Object.entries(map);
-  if (entries.length === 0) return '—';
-  return entries
-    .map(([currency, value]) =>
-      value === 'N/A' ? `N/A (${currency})` : `${formatDisplayPercent(value)} (${currency})`,
-    )
-    .join(' · ');
+/** Reference UI shows income yield to one decimal (e.g. 9.2%). */
+function formatYieldOneDecimal(value: string): string {
+  const cleaned = value.replace(/%/g, '').trim();
+  const n = Number(cleaned);
+  if (!Number.isFinite(n)) return value;
+  return `${n.toFixed(1)}%`;
+}
+
+/** Hero ROI rounds to one decimal (e.g. +8.1%). */
+function formatPercentOneDecimal(value: string): string {
+  const cleaned = value.replace(/%/g, '').trim();
+  const n = Number(cleaned);
+  if (!Number.isFinite(n)) return value;
+  const sign = n > 0 ? '+' : n < 0 ? '−' : '';
+  return `${sign}${Math.abs(n).toFixed(1)}%`;
 }
