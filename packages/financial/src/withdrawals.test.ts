@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   assertStatusTransition,
   assertWithdrawalInvariants,
+  countRecognizedPayouts,
   isRecognizedPayout,
   sumPendingByCurrency,
   sumRecognizedByCurrency,
+  sumRecognizedInRange,
+  utcMonthBounds,
 } from './index';
 
 describe('withdrawal recognition', () => {
@@ -73,5 +76,41 @@ describe('withdrawal recognition', () => {
     expect(() => assertStatusTransition('PAID', 'PENDING')).toThrow();
     expect(() => assertStatusTransition('PENDING', 'PAID')).not.toThrow();
     expect(() => assertStatusTransition('PAID', 'REVERSED')).not.toThrow();
+  });
+});
+
+describe('period recognized payouts', () => {
+  it('buckets by receivedAt in half-open range', () => {
+    const rows = [
+      {
+        amount: '100',
+        currency: 'USD',
+        status: 'PAID' as const,
+        requestedAt: new Date('2026-01-01'),
+        receivedAt: new Date('2026-09-10T12:00:00.000Z'),
+      },
+      {
+        amount: '50',
+        currency: 'USD',
+        status: 'PAID' as const,
+        requestedAt: new Date('2026-01-01'),
+        receivedAt: new Date('2026-08-15T12:00:00.000Z'),
+      },
+      {
+        amount: '25',
+        currency: 'USD',
+        status: 'PENDING' as const,
+        requestedAt: new Date('2026-09-01'),
+        receivedAt: null,
+      },
+    ];
+    const bounds = utcMonthBounds(new Date('2026-09-15T00:00:00.000Z'));
+    expect(sumRecognizedInRange(rows, bounds.thisMonth.start, bounds.thisMonth.end)).toEqual({
+      USD: '100',
+    });
+    expect(sumRecognizedInRange(rows, bounds.lastMonth.start, bounds.lastMonth.end)).toEqual({
+      USD: '50',
+    });
+    expect(countRecognizedPayouts(rows)).toBe(2);
   });
 });

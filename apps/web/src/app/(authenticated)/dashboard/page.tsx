@@ -1,14 +1,12 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import {
   Alert,
   Badge,
-  Button,
   Card,
   EmptyState,
-  FormField,
-  Input,
   MetricCard,
   PageHeader,
-  SearchInput,
   Table,
   TBody,
   TD,
@@ -16,25 +14,52 @@ import {
   THead,
   TR,
 } from '@fpm/ui';
-import { getSessionAction } from '@/server/actions/auth';
-import { redirect } from 'next/navigation';
+import { getDashboardAction } from '@/server/actions/dashboard';
+
+function statusTone(status: string) {
+  if (status === 'PAID') return 'success' as const;
+  if (status === 'PENDING') return 'warning' as const;
+  if (status === 'FAILED') return 'danger' as const;
+  return 'neutral' as const;
+}
+
+function formatDate(value: Date | null) {
+  if (!value) return '—';
+  return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default async function DashboardPage() {
-  const session = await getSessionAction();
-  if (!session.ok) redirect('/login');
+  const result = await getDashboardAction();
+  if (!result.ok) {
+    if (result.error.code === 'UNAUTHENTICATED') redirect('/login');
+    return (
+      <>
+        <PageHeader title="Dashboard" description="Funded overview." />
+        <EmptyState title="Unable to load dashboard" description={result.error.message} />
+      </>
+    );
+  }
+
+  const { workspace, snapshot } = result;
+  const { metrics, withdrawalStatusDistribution, phaseDistribution } = snapshot;
 
   return (
     <>
       <PageHeader
-        eyebrow="Trading business"
-        title={`Welcome back`}
-        description={`${session.workspace.name} · Design system baseline (FPM-004). Domain metrics arrive in later tasks.`}
-        actions={<Button disabled>+ Record Withdrawal</Button>}
+        eyebrow="Funded"
+        title="Dashboard"
+        description={`${workspace.name} · Recognized income uses PAID + receivedAt (Financial Domain).`}
+        actions={
+          <Link href="/withdrawals/new" className="fpm-btn fpm-btn--primary">
+            + Log Withdrawal
+          </Link>
+        }
       />
 
-      <Alert tone="info" title="Foundation shell">
-        Sidebar IA follows Spec §5 / ADR-008. Financial totals are intentionally omitted until the
-        Financial Domain ships.
+      <Alert tone="info" title="Confirmed metrics only">
+        Total/current funded capital, portfolio growth, avg/month, and broker cards are deferred
+        until open questions resolve ({snapshot.deferred.fundedCapital};{' '}
+        {snapshot.deferred.brokerMetrics}).
       </Alert>
 
       <div
@@ -45,72 +70,158 @@ export default async function DashboardPage() {
           marginTop: 24,
         }}
       >
-        <MetricCard label="This month" value="—" helper="Pending domain" tone="yellow" />
-        <MetricCard label="Last month" value="—" helper="Pending domain" tone="orange" />
-        <MetricCard label="Lifetime" value="—" helper="Pending domain" tone="purple" />
-        <MetricCard label="Avg / month" value="—" helper="Pending domain" tone="pink" />
+        <MetricCard
+          label="This month"
+          value={metrics.thisMonthRecognized}
+          helper="Recognized · receivedAt · UTC month"
+          tone="yellow"
+        />
+        <MetricCard
+          label="Last month"
+          value={metrics.lastMonthRecognized}
+          helper="Recognized · receivedAt · UTC month"
+          tone="orange"
+        />
+        <MetricCard
+          label="Lifetime"
+          value={metrics.lifetimeRecognized}
+          helper={`${metrics.recognizedPayoutCount} recognized payouts`}
+          tone="purple"
+        />
+        <MetricCard
+          label="Pending"
+          value={metrics.pendingAmount}
+          helper="Status PENDING · per currency"
+          tone="pink"
+        />
+        <MetricCard
+          label="Active accounts"
+          value={String(metrics.activeAccountCount)}
+          helper={`${metrics.totalAccountCount} total (non-archived)`}
+          tone="neutral"
+        />
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 16,
+          marginTop: 24,
+        }}
+      >
+        <Card>
+          <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>Withdrawal status</h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(Object.entries(withdrawalStatusDistribution) as Array<[string, number]>).map(
+              ([status, count]) => (
+                <Badge key={status} tone={statusTone(status)}>
+                  {status}: {count}
+                </Badge>
+              ),
+            )}
+          </div>
+        </Card>
+        <Card>
+          <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>Account phases</h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(Object.entries(phaseDistribution) as Array<[string, number]>).map(
+              ([phase, count]) => (
+                <Badge key={phase} tone={phase === 'ACTIVE' ? 'info' : 'neutral'}>
+                  {phase}: {count}
+                </Badge>
+              ),
+            )}
+          </div>
+        </Card>
       </div>
 
       <section style={{ marginTop: 32 }}>
         <PageHeader
-          title="Component baseline"
-          description="Reusable primitives from @fpm/ui for upcoming modules."
+          title="Recent withdrawals"
+          description="Latest payout records."
+          actions={
+            <Link href="/withdrawals" className="fpm-btn fpm-btn--secondary">
+              View all
+            </Link>
+          }
         />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-          <Badge tone="success">Paid</Badge>
-          <Badge tone="warning">Pending</Badge>
-          <Badge tone="danger">Failed</Badge>
-          <Badge tone="info">Active</Badge>
-          <Badge>Closed</Badge>
-        </div>
-        <Card>
-          <div style={{ display: 'grid', gap: 12, maxWidth: 420 }}>
-            <FormField id="demo-search" label="Search">
-              <SearchInput id="demo-search" placeholder="Search firms…" disabled />
-            </FormField>
-            <FormField id="demo-name" label="Firm name" required hint="Example field">
-              <Input id="demo-name" placeholder="e.g. FTMO" disabled />
-            </FormField>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="primary" disabled>
-                Primary
-              </Button>
-              <Button variant="secondary" disabled>
-                Secondary
-              </Button>
-            </div>
-          </div>
-        </Card>
-        <div style={{ marginTop: 16 }}>
+        {snapshot.recentWithdrawals.length === 0 ? (
+          <EmptyState
+            title="No withdrawals yet"
+            description="Log a payout to populate income metrics."
+          />
+        ) : (
           <Table>
             <THead>
               <TR>
-                <TH>Module</TH>
+                <TH>Amount</TH>
                 <TH>Status</TH>
+                <TH>Account</TH>
+                <TH>Requested</TH>
+                <TH>Received</TH>
               </TR>
             </THead>
             <TBody>
-              <TR>
-                <TD>Firms</TD>
-                <TD>
-                  <Badge tone="warning">FPM-005</Badge>
-                </TD>
-              </TR>
-              <TR>
-                <TD>Withdrawals</TD>
-                <TD>
-                  <Badge tone="warning">FPM-007/008</Badge>
-                </TD>
-              </TR>
+              {snapshot.recentWithdrawals.map((row) => (
+                <TR key={row.id}>
+                  <TD style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                    <Link href={`/withdrawals/${row.id}`}>
+                      {row.amount} {row.currency}
+                    </Link>
+                  </TD>
+                  <TD>
+                    <Badge tone={statusTone(row.status)}>{row.status}</Badge>
+                  </TD>
+                  <TD>{row.accountLabel}</TD>
+                  <TD>{formatDate(row.requestedAt)}</TD>
+                  <TD>{formatDate(row.receivedAt)}</TD>
+                </TR>
+              ))}
             </TBody>
           </Table>
-        </div>
-        <div style={{ marginTop: 16 }}>
+        )}
+      </section>
+
+      <section style={{ marginTop: 32 }}>
+        <PageHeader
+          title="Recent scale events"
+          description="Latest size upgrades."
+          actions={
+            <Link href="/scale-events" className="fpm-btn fpm-btn--secondary">
+              View all
+            </Link>
+          }
+        />
+        {snapshot.recentScaleEvents.length === 0 ? (
           <EmptyState
-            title="No module data yet"
-            description="Business screens will use this empty-state pattern."
+            title="No scale events yet"
+            description="Record a scale-up when an account size increases."
           />
-        </div>
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Account</TH>
+                <TH>From → To</TH>
+                <TH>Scaled</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {snapshot.recentScaleEvents.map((row) => (
+                <TR key={row.id}>
+                  <TD>
+                    <Link href={`/scale-events/${row.id}`}>{row.accountLabel}</Link>
+                  </TD>
+                  <TD style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                    {row.fromSize} → {row.toSize} {row.currency}
+                  </TD>
+                  <TD>{formatDate(row.scaledAt)}</TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
       </section>
     </>
   );
