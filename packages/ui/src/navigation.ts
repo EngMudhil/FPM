@@ -1,6 +1,20 @@
 export type NavItem = {
   label: string;
   href: string;
+  icon?:
+    | 'home'
+    | 'building'
+    | 'card'
+    | 'withdraw'
+    | 'trend'
+    | 'shield'
+    | 'globe'
+    | 'report'
+    | 'settings'
+    | 'users'
+    | 'workspace'
+    | 'data'
+    | 'audit';
 };
 
 export type NavGroup = {
@@ -13,32 +27,32 @@ export const fpmNavGroups: NavGroup[] = [
   {
     label: 'Overview',
     items: [
-      { label: 'Dashboard', href: '/dashboard' },
-      { label: 'Reports', href: '/reports' },
+      { label: 'Dashboard', href: '/dashboard', icon: 'home' },
+      { label: 'Reports', href: '/reports', icon: 'report' },
     ],
   },
   {
     label: 'Prop Firms',
     items: [
-      { label: 'Firms', href: '/firms' },
-      { label: 'Funded Accounts', href: '/accounts' },
-      { label: 'Withdrawals', href: '/withdrawals' },
-      { label: 'Scale Events', href: '/scale-events' },
-      { label: 'Certificates', href: '/certificates' },
+      { label: 'Firms', href: '/firms', icon: 'building' },
+      { label: 'Funded Accounts', href: '/accounts', icon: 'card' },
+      { label: 'Withdrawals', href: '/withdrawals', icon: 'withdraw' },
+      { label: 'Scale Events', href: '/scale-events', icon: 'trend' },
+      { label: 'Certificates', href: '/certificates', icon: 'shield' },
     ],
   },
   {
     label: 'Real Accounts',
-    items: [{ label: 'Broker Accounts', href: '/broker-accounts' }],
+    items: [{ label: 'Broker Accounts', href: '/broker-accounts', icon: 'globe' }],
   },
   {
     label: 'System',
     items: [
-      { label: 'Security', href: '/settings/security' },
-      { label: 'Workspace', href: '/settings/workspace' },
-      { label: 'Members', href: '/settings/members' },
-      { label: 'Data Management', href: '/settings/data' },
-      { label: 'Audit Log', href: '/settings/audit-log' },
+      { label: 'Security', href: '/settings/security', icon: 'settings' },
+      { label: 'Workspace', href: '/settings/workspace', icon: 'workspace' },
+      { label: 'Members', href: '/settings/members', icon: 'users' },
+      { label: 'Data Management', href: '/settings/data', icon: 'data' },
+      { label: 'Audit Log', href: '/settings/audit-log', icon: 'audit' },
     ],
   },
 ];
