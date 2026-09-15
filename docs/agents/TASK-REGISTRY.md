@@ -29,21 +29,28 @@ Detail: `docs/architecture/IMPLEMENTATION-SEQUENCE.md`.
 | FPM-015 | Audit | PASS | b7b4b60 · PR #13 merged |
 | FPM-016 | Backup | PASS | 1907857 · PR #14 merged |
 | FPM-017 | Restore | PASS | 5fef5f3 · PR #15 merged |
-| FPM-018 | Production Deployment | PASS | See completion record (this branch) |
+| FPM-018 | Production Deployment | PASS | 972e18f · PR #16 merged |
+| FPM-019 | Full QA | PASS | See completion record (this branch) |
+| FPM-020 | MT5 Integration | PASS | Spike only — ADR-004 reaffirmed FUTURE |
 
-### FPM-018 completion
+### FPM-019 completion
 
 * **Date:** 2026-09-15
-* **Summary:** Dockerfile, docker-compose.prod.yml, Caddyfile, `.env.production.example`, DEPLOYMENT.md runbook
-* **Deferred:** S3, worker process, CI deploy automation
+* **Summary:** QA report; receivedAt regression tests; Playwright core-route specs (opt-in)
+* **Artifact:** `docs/testing/QA-REPORT-FPM-019.md`
+
+### FPM-020 completion
+
+* **Date:** 2026-09-15
+* **Summary:** MT5 spike — no live integration; ADR-004 reaffirmed FUTURE
+* **Artifact:** `docs/spikes/MT5-SPIKE-FPM-020.md`
 
 ## Next
 
 | ID | Name | Owner | Dependencies | Acceptance (summary) | Reviewers | Output |
 | --- | --- | --- | --- | --- | --- | --- |
-| FPM-019 | Full QA | QA | Feature set | Cross e2e/a11y/financial suite | Lead | QA report |
-| FPM-020 | MT5 Integration | Architecture + Backend + Security | After CORE | Spike/ADR update only until approved | Security + Lead | Spike report |
+| — | Post-MVP hardening | Lead | Production use | CI e2e, S3, workers, unresolved OQs | Lead | Backlog |
 
 ## Recommended next task
 
-**FPM-019 — Full QA** (after FPM-018 PASS)
+**Post-MVP:** enable CI Playwright + resolve remaining open questions (OQ-001/002/003) before inventing dashboard capital formulas.
