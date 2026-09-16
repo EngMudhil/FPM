@@ -191,6 +191,18 @@
   justify-content: space-between;
   gap: 8px;
   min-height: 36px;
+  position: relative;
+  z-index: 2;
+}
+
+.fpm-metric-card__top-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
 }
 
 .fpm-metric-card__icon {

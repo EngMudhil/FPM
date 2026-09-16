@@ -311,15 +311,20 @@ export async function getDashboardSnapshot(
   const records = withdrawalRows.map((r) => toRecord(r.withdrawal));
   const monthBounds = utcMonthBounds(now);
 
+  const LOOKBACK_QUARTERS = 16;
+  const LOOKBACK_YEARS = 5;
   let earliestReceived: Date | null = null;
   for (const r of records) {
     if (!isRecognizedPayout(r) || !r.receivedAt) continue;
     if (!earliestReceived || r.receivedAt < earliestReceived) earliestReceived = r.receivedAt;
   }
-  const minQuarterOffset = earliestReceived ? -quarterIndexDiff(earliestReceived, now) : 0;
-  const minYearOffset = earliestReceived
+  const dataMinQuarter = earliestReceived ? -quarterIndexDiff(earliestReceived, now) : 0;
+  const dataMinYear = earliestReceived
     ? earliestReceived.getUTCFullYear() - now.getUTCFullYear()
     : 0;
+  // Always allow navigating back through empty periods (show $0), not only months with payouts.
+  const minQuarterOffset = Math.min(dataMinQuarter, -LOOKBACK_QUARTERS);
+  const minYearOffset = Math.min(dataMinYear, -LOOKBACK_YEARS);
 
   const quarterOffset = clampOffset(opts.quarterOffset ?? 0, minQuarterOffset, 0);
   const yearOffset = clampOffset(opts.yearOffset ?? 0, minYearOffset, 0);
