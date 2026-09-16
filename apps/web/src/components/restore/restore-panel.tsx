@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button, FormField, Input } from '@fpm/ui';
 import { confirmRestoreAction, uploadRestoreZipAction } from '@/server/actions/restore';
 
@@ -16,6 +17,7 @@ export function RestorePanel({
     errorMessage: string | null;
   }>;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export function RestorePanel({
               startTransition(async () => {
                 const result = await confirmRestoreAction(data);
                 if (!result.ok) setError(result.error.message);
-                else window.location.reload();
+                else router.refresh();
               });
             }}
           >

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   Badge,
-  Button,
   EmptyState,
   PageHeader,
   SearchInput,
@@ -12,6 +11,7 @@ import {
   THead,
   TR,
 } from '@fpm/ui';
+import { SoftFilterForm } from '@/components/soft-filter-form';
 import { listFirmsAction } from '@/server/actions/firms';
 
 function formatDate(value: Date) {
@@ -60,20 +60,18 @@ export default async function FirmsPage({
         }
       />
 
-      <form
-        method="get"
+      <SoftFilterForm
+        submitLabel="Search"
+        pendingLabel="Searching…"
         style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}
       >
         <div style={{ flex: 1, maxWidth: 360 }}>
           <SearchInput name="q" defaultValue={params.q ?? ''} placeholder="Search firms..." />
         </div>
-        <Button type="submit" variant="secondary" size="sm">
-          Search
-        </Button>
         <span style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>
           {total} firm{total === 1 ? '' : 's'}
         </span>
-      </form>
+      </SoftFilterForm>
 
       {items.length === 0 ? (
         <EmptyState
