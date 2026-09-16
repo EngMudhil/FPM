@@ -35,6 +35,17 @@ describe('formatDisplayMoney', () => {
     expect(formatDisplayMoney('2966.66666666', 'USD')).toBe('$2,966.67');
   });
 
+  it('formats funded (0dp compact) and real (2dp forced) styles', () => {
+    expect(formatDisplayMoney('820000', 'USD', { decimals: 0, compact: true })).toBe('$820,000');
+    expect(formatDisplayMoney('1500000', 'USD', { decimals: 0, compact: true })).toBe('$1.5M');
+    expect(formatDisplayMoney('8000', 'USD', { decimals: 2, forceFraction: true })).toBe(
+      '$8,000.00',
+    );
+    expect(
+      formatDisplayMoney('644', 'USD', { decimals: 2, forceFraction: true, signed: true }),
+    ).toBe('+$644.00');
+  });
+
   it('formats non-USD with code suffix', () => {
     expect(formatDisplayMoney('900', 'EUR')).toBe('900 EUR');
   });

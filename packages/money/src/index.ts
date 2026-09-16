@@ -86,21 +86,46 @@ export function parseMoneyInput(input: z.infer<typeof moneyInputSchema>): Money 
 /**
  * Display-only formatting for UI. Never use for aggregation authority.
  * USD → `$8,900` / `$8,900.50`; other codes → `8,900 EUR`.
+ *
+ * Dashboard audit: funded totals use `decimals: 0` (+ compact ≥1M);
+ * real-account totals use `decimals: 2` with `forceFraction: true`.
  */
 export function formatDisplayMoney(
   amount: string,
   currency: string,
-  opts?: { signed?: boolean },
+  opts?: {
+    signed?: boolean;
+    decimals?: number;
+    forceFraction?: boolean;
+    compact?: boolean;
+  },
 ): string {
   const code = currencyCodeSchema.parse(currency);
   const value = new Decimal(amount);
-  const rounded = value.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+  const decimals = opts?.decimals ?? 2;
+  const rounded = value.toDecimalPlaces(decimals, Decimal.ROUND_HALF_UP);
   const negative = rounded.isNegative();
   const abs = rounded.abs();
-  const fixed = abs.toFixed(2);
-  const [intRaw = '0', fracRaw = '00'] = fixed.split('.');
+
+  if (opts?.compact && abs.greaterThanOrEqualTo(1_000_000)) {
+    const millions = abs.div(1_000_000);
+    const compact = millions.toFixed(millions.modulo(1).isZero() ? 0 : 1);
+    const sign = opts?.signed ? (negative ? '−' : value.isZero() ? '' : '+') : negative ? '−' : '';
+    if (code === 'USD') return `${sign}$${compact}M`;
+    return `${sign}${compact}M ${code}`;
+  }
+
+  const fixed = abs.toFixed(decimals);
+  const [intRaw = '0', fracRaw = decimals === 0 ? '' : '0'.repeat(decimals)] = fixed.split('.');
   const intPart = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const frac = fracRaw === '00' ? '' : `.${fracRaw.replace(/0+$/, '')}`;
+  let frac = '';
+  if (decimals > 0) {
+    if (opts?.forceFraction) {
+      frac = `.${fracRaw}`;
+    } else if (fracRaw.replace(/0/g, '') !== '') {
+      frac = `.${fracRaw.replace(/0+$/, '')}`;
+    }
+  }
   const core = `${intPart}${frac}`;
   const sign = opts?.signed ? (negative ? '−' : value.isZero() ? '' : '+') : negative ? '−' : '';
   if (code === 'USD') return `${sign}$${core}`;

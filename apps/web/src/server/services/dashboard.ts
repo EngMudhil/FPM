@@ -27,6 +27,7 @@ import {
   isRecognizedPayout,
   peakEquity,
   sumCurrentFundedCapitalByCurrency,
+  sumPendingByCurrency,
   sumRecognizedByCurrency,
   sumRecognizedByKey,
   sumRecognizedInRange,
@@ -60,12 +61,31 @@ function primaryCurrency(map: Record<string, string>): string | null {
   return keys[0] ?? null;
 }
 
-function formatMoneyMap(map: Record<string, string>): string {
+function formatMoneyMap(
+  map: Record<string, string>,
+  opts?: {
+    signed?: boolean;
+    decimals?: number;
+    forceFraction?: boolean;
+    compact?: boolean;
+  },
+): string {
+  const style = opts ?? { decimals: 0, compact: true };
   const entries = Object.entries(map).filter(([, amount]) => amount !== 'N/A');
   if (entries.length === 0) {
     return Object.values(map).some((v) => v === 'N/A') ? 'N/A' : '—';
   }
-  return entries.map(([currency, amount]) => formatDisplayMoney(amount, currency)).join(' · ');
+  return entries
+    .map(([currency, amount]) => formatDisplayMoney(amount, currency, style))
+    .join(' · ');
+}
+
+function formatRealMoney(amount: string, currency: string, opts?: { signed?: boolean }): string {
+  return formatDisplayMoney(amount, currency, {
+    decimals: 2,
+    forceFraction: true,
+    signed: opts?.signed,
+  });
 }
 
 function amountIn(map: Record<string, string>, currency: string | null): string {
@@ -152,10 +172,13 @@ export type DashboardSnapshot = {
     firmCount: number;
     certificateCount: number;
     paidWithdrawalCount: number;
+    pendingWithdrawalCount: number;
+    pendingWithdrawalAmount: string;
     brokerCount: number;
     brokerAccountCount: number;
     currentRealEquity: string;
     brokerNetPl: string;
+    brokerNetPlNegative: boolean;
     brokerRoi: string;
     brokerRoiHero: string;
     totalDeposits: string;
@@ -340,7 +363,9 @@ export async function getDashboardSnapshot(
   }
 
   const best = bestMonthByCurrency(records)[currency];
-  const bestMonthDisplay = best ? formatDisplayMoney(best.amount, currency) : '—';
+  const bestMonthDisplay = best
+    ? formatDisplayMoney(best.amount, currency, { decimals: 0, compact: true })
+    : '—';
   const bestMonthHelper = best
     ? new Date(`${best.month}-01T00:00:00.000Z`).toLocaleString('en-US', {
         month: 'long',
@@ -395,7 +420,7 @@ export async function getDashboardSnapshot(
     key,
     label: monthLabel(key),
     shortLabel: shortMonth(key),
-    amount: formatDisplayMoney(bucket.amount.toString(), currency),
+    amount: formatDisplayMoney(bucket.amount.toString(), currency, { decimals: 0, compact: true }),
     amountRaw: Number(bucket.amount.toString()),
     count: bucket.count,
   }));
@@ -423,13 +448,14 @@ export async function getDashboardSnapshot(
         : Number(money.amount.div(lifetimeAmt.amount).times(100).toFixed(0));
       return {
         name,
-        amount: formatDisplayMoney(raw, currency),
+        amount: formatDisplayMoney(raw, currency, { decimals: 0, compact: true }),
         percent,
         sort: money.amount,
       };
     })
     .sort((a, b) => (b.sort.greaterThan(a.sort) ? 1 : -1))
-    .map(({ name, amount, percent }) => ({ name, amount, percent }));
+    .map(({ name, amount, percent }) => ({ name, amount, percent }))
+    .slice(0, 5);
 
   // Broker metrics
   const latestByAccount = new Map<string, { equity: string; currency: string }>();
@@ -488,7 +514,7 @@ export async function getDashboardSnapshot(
         : money;
       profitByAccountList.push({
         name: account.accountName,
-        amount: formatDisplayMoney(pnl, account.currency, { signed: true }),
+        amount: formatRealMoney(pnl, account.currency, { signed: true }),
         amountRaw: Number(money.toString()),
       });
     }
@@ -549,6 +575,9 @@ export async function getDashboardSnapshot(
   const brokerRoiPrecise = roi === 'N/A' ? 'N/A' : formatDisplayPercent(roi);
   const brokerRoiHero = roi === 'N/A' ? 'N/A' : formatPercentOneDecimal(roi);
 
+  const pendingMap = sumPendingByCurrency(records);
+  const pendingCount = statusCounts.PENDING;
+
   return {
     asOfLabel,
     firstName: null,
@@ -573,7 +602,7 @@ export async function getDashboardSnapshot(
       averagePayout: formatMoneyMap(avgPayoutMap),
       largestWithdrawal: largestAmount.amount.isZero()
         ? '—'
-        : formatDisplayMoney(largestAmount.toString(), currency),
+        : formatDisplayMoney(largestAmount.toString(), currency, { decimals: 0, compact: true }),
       largestWithdrawalFirm: largestFirm,
       largestWithdrawalDate: largestDate,
       bestMonth: bestMonthDisplay,
@@ -586,27 +615,36 @@ export async function getDashboardSnapshot(
       firmCount: firmRows.length,
       certificateCount: certCountRows[0]?.value ?? 0,
       paidWithdrawalCount: statusCounts.PAID,
+      pendingWithdrawalCount: pendingCount,
+      pendingWithdrawalAmount: formatMoneyMap(pendingMap),
       brokerCount: brokerRows.length,
       brokerAccountCount: brokerAccountRows.length,
-      currentRealEquity: formatDisplayMoney(totalEquity.toString(), currency),
-      brokerNetPl: formatDisplayMoney(totalPnl.toString(), currency, { signed: true }),
+      currentRealEquity: formatRealMoney(totalEquity.toString(), currency),
+      brokerNetPl: formatRealMoney(totalPnl.toString(), currency, { signed: true }),
+      brokerNetPlNegative: totalPnl.amount.isNegative(),
       brokerRoi: brokerRoiPrecise,
       brokerRoiHero,
-      totalDeposits: formatDisplayMoney(totalDeposits.toString(), currency),
-      totalBrokerWithdrawals: formatDisplayMoney(totalBrokerWd.toString(), currency),
-      peakEquity: peak ? formatDisplayMoney(peak.equity, currency) : '—',
-      tradingDrawdown:
-        drawdownAmount === 'N/A' ? 'N/A' : formatDisplayMoney(drawdownAmount, currency),
+      totalDeposits: formatRealMoney(totalDeposits.toString(), currency),
+      totalBrokerWithdrawals: formatRealMoney(totalBrokerWd.toString(), currency),
+      peakEquity: peak ? formatRealMoney(peak.equity, currency) : '—',
+      tradingDrawdown: drawdownAmount === 'N/A' ? 'N/A' : formatRealMoney(drawdownAmount, currency),
       combinedManagedCapital: combinedCapital
-        ? formatDisplayMoney(combinedCapital.amount, combinedCapital.currency)
+        ? formatDisplayMoney(combinedCapital.amount, combinedCapital.currency, {
+            decimals: 0,
+            compact: true,
+          })
         : '—',
       combinedGeneratedProfit: combinedProfit
-        ? formatDisplayMoney(combinedProfit.amount, combinedProfit.currency, { signed: true })
+        ? formatDisplayMoney(combinedProfit.amount, combinedProfit.currency, {
+            decimals: 2,
+            forceFraction: true,
+            signed: true,
+          })
         : '—',
       fundedCapitalRaw: formatMoneyMap(currentCapital),
-      realEquityRaw: formatDisplayMoney(totalEquity.toString(), currency),
+      realEquityRaw: formatRealMoney(totalEquity.toString(), currency),
       fundedPayoutsRaw: formatMoneyMap(lifetime),
-      realPlRaw: formatDisplayMoney(totalPnl.toString(), currency, { signed: true }),
+      realPlRaw: formatRealMoney(totalPnl.toString(), currency, { signed: true }),
     },
     incomeByFirm,
     monthlyPayouts: [...monthlyPayoutsChrono]
@@ -618,11 +656,12 @@ export async function getDashboardSnapshot(
     profitByBroker: Object.entries(profitByBrokerMap)
       .map(([name, money]) => ({
         name,
-        amount: formatDisplayMoney(money.toString(), currency, { signed: true }),
+        amount: formatRealMoney(money.toString(), currency, { signed: true }),
         amountRaw: Number(money.toString()),
       }))
-      .sort((a, b) => b.amountRaw - a.amountRaw),
-    profitByAccount: profitByAccountList.sort((a, b) => b.amountRaw - a.amountRaw),
+      .sort((a, b) => b.amountRaw - a.amountRaw)
+      .slice(0, 5),
+    profitByAccount: profitByAccountList.sort((a, b) => b.amountRaw - a.amountRaw).slice(0, 5),
     recentWithdrawals: recentWd.map((row) => ({
       id: row.withdrawal.id,
       amount: row.withdrawal.amount,
