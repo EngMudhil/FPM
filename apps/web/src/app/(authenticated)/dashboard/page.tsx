@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
-import { Badge, Card, EmptyState, MetricCard } from '@fpm/ui';
+import { Alert, Badge, Card, EmptyState, MetricCard } from '@fpm/ui';
 import { formatDisplayMoney } from '@fpm/money';
 import { getDashboardAction } from '@/server/actions/dashboard';
 import { getSessionAction } from '@/server/actions/auth';
@@ -50,6 +50,25 @@ function PeriodNav() {
   );
 }
 
+function SectionDivider({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        paddingTop: 16,
+      }}
+    >
+      <div style={{ flexShrink: 0 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A' }}>{title}</div>
+        <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{subtitle}</div>
+      </div>
+      <div style={{ flex: 1, height: 1, background: '#E2E8F0', minWidth: 24 }} aria-hidden />
+    </div>
+  );
+}
+
 function AreaChart({ points }: { points: Array<{ label: string; amountRaw: number }> }) {
   const width = 720;
   const height = 200;
@@ -75,8 +94,8 @@ function AreaChart({ points }: { points: Array<{ label: string; amountRaw: numbe
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="200" role="img">
         <defs>
           <linearGradient id="fpmIncomeFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.32" />
-            <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.02" />
           </linearGradient>
         </defs>
         {yTicks.map((label, i) => {
@@ -100,7 +119,7 @@ function AreaChart({ points }: { points: Array<{ label: string; amountRaw: numbe
         <polyline
           points={line}
           fill="none"
-          stroke="#0d9488"
+          stroke="#7c3aed"
           strokeWidth="3"
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -110,7 +129,7 @@ function AreaChart({ points }: { points: Array<{ label: string; amountRaw: numbe
             cx={coords[coords.length - 1]!.x}
             cy={coords[coords.length - 1]!.y}
             r="5"
-            fill="#0d9488"
+            fill="#7c3aed"
           />
         ) : null}
         {coords.map((c, i) =>
@@ -164,7 +183,7 @@ function BarChart({ points }: { points: Array<{ shortLabel: string; amountRaw: n
                 maxWidth: 26,
                 height: h,
                 borderRadius: '8px 8px 4px 4px',
-                background: 'linear-gradient(180deg, #c4b5fd 0%, #8b5cf6 100%)',
+                background: 'linear-gradient(180deg, #93c5fd 0%, #2563eb 100%)',
               }}
             />
             <span style={{ fontSize: 11, color: 'var(--fpm-text-muted)' }}>{p.shortLabel}</span>
@@ -181,12 +200,16 @@ function ProgressRow({
   percent,
   color,
   subtitle,
+  rank,
+  barHeight = 10,
 }: {
   name: string;
   amount: string;
   percent: number;
   color: string;
   subtitle?: string;
+  rank?: number;
+  barHeight?: number;
 }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -197,14 +220,35 @@ function ProgressRow({
           gap: 12,
           marginBottom: 6,
           fontWeight: 600,
+          alignItems: 'center',
         }}
       >
-        <span>{name}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {rank != null ? (
+            <span
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 999,
+                display: 'inline-grid',
+                placeItems: 'center',
+                fontSize: 11,
+                fontWeight: 700,
+                background: 'color-mix(in srgb, #0f172a 8%, transparent)',
+                color: '#0F172A',
+                flexShrink: 0,
+              }}
+            >
+              {rank}
+            </span>
+          ) : null}
+          {name}
+        </span>
         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{amount}</span>
       </div>
       <div
         style={{
-          height: 10,
+          height: barHeight,
           borderRadius: 999,
           background: 'color-mix(in srgb, #0f172a 6%, transparent)',
           overflow: 'hidden',
@@ -301,16 +345,53 @@ export default async function DashboardPage() {
       ? m.thisMonthChange.replace('+', '').replace('-', '↓ ')
       : null;
 
+  const combinedProfitNegative =
+    m.combinedGeneratedProfit.startsWith('−') || m.combinedGeneratedProfit.startsWith('-');
+
   return (
-    <div style={{ display: 'grid', gap: 28 }}>
+    <div style={{ display: 'grid', gap: 20, paddingBottom: 48 }}>
       <Card
         style={{
-          background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #f8fafc 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid #E2E8F0',
+          borderRadius: 16,
+          background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 55%, #EEF2FF 100%)',
           padding: 24,
         }}
       >
         <div
+          aria-hidden
           style={{
+            position: 'absolute',
+            top: -80,
+            right: -60,
+            width: 340,
+            height: 340,
+            borderRadius: '50%',
+            background:
+              'radial-gradient(circle, color-mix(in srgb, #3b82f6 18%, transparent) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            bottom: -70,
+            left: -40,
+            width: 240,
+            height: 240,
+            borderRadius: '50%',
+            background:
+              'radial-gradient(circle, color-mix(in srgb, #6366f1 16%, transparent) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'relative',
             display: 'flex',
             justifyContent: 'space-between',
             gap: 16,
@@ -321,11 +402,11 @@ export default async function DashboardPage() {
           <div>
             <div
               style={{
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: 700,
-                letterSpacing: '0.08em',
+                letterSpacing: '0.09em',
                 textTransform: 'uppercase',
-                color: 'var(--fpm-text-muted)',
+                color: '#94A3B8',
               }}
             >
               Trading business
@@ -333,9 +414,10 @@ export default async function DashboardPage() {
             <h1
               style={{
                 margin: '6px 0 0',
-                fontSize: 32,
-                fontWeight: 750,
-                letterSpacing: '-0.03em',
+                fontSize: 17,
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                color: '#0F172A',
               }}
             >
               Welcome back, {firstName}.
@@ -348,6 +430,7 @@ export default async function DashboardPage() {
 
         <div
           style={{
+            position: 'relative',
             display: 'grid',
             gridTemplateColumns: 'minmax(0, 1.5fr) minmax(220px, 0.7fr)',
             gap: 16,
@@ -369,11 +452,13 @@ export default async function DashboardPage() {
             </div>
             <div
               style={{
-                fontSize: 48,
+                fontSize: 'clamp(2.6rem, 5vw, 3.75rem)',
                 fontWeight: 750,
                 letterSpacing: '-0.04em',
                 lineHeight: 1,
                 marginBottom: 16,
+                fontVariantNumeric: 'tabular-nums',
+                color: '#0F172A',
               }}
             >
               {m.totalFundedCapital}
@@ -405,29 +490,43 @@ export default async function DashboardPage() {
             >
               Largest withdrawal
             </div>
-            <div style={{ fontSize: 30, fontWeight: 750, letterSpacing: '-0.03em' }}>
-              {m.largestWithdrawal}
-            </div>
-            <div style={{ marginTop: 10, fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>
-              {m.largestWithdrawalFirm ?? '—'}
-            </div>
-            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--fpm-text-muted)' }}>
-              {m.largestWithdrawalDate ?? '—'}
-            </div>
+            {m.largestWithdrawal === '—' ? (
+              <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--fpm-text-muted)' }}>
+                No withdrawals recorded yet.
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 30, fontWeight: 750, letterSpacing: '-0.03em' }}>
+                  {m.largestWithdrawal}
+                </div>
+                <div style={{ marginTop: 10, fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>
+                  {m.largestWithdrawalFirm ?? '—'}
+                </div>
+                <div style={{ marginTop: 4, fontSize: 12, color: 'var(--fpm-text-muted)' }}>
+                  {m.largestWithdrawalDate ?? '—'}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </Card>
 
+      {m.pendingWithdrawalCount > 0 ? (
+        <Alert tone="warning">
+          {m.pendingWithdrawalCount} pending withdrawal
+          {m.pendingWithdrawalCount === 1 ? '' : 's'} totaling {m.pendingWithdrawalAmount}.{' '}
+          <Link href="/withdrawals?status=PENDING">View pending</Link>
+        </Alert>
+      ) : null}
+
       <section>
-        <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 750 }}>Funded Business</h2>
-        <p style={{ margin: '0 0 14px', color: 'var(--fpm-text-muted)', fontSize: 14 }}>
-          Prop firm accounts, payouts & income
-        </p>
+        <SectionDivider title="Funded Business" subtitle="Prop firm accounts, payouts & income" />
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
             gap: 12,
+            marginTop: 14,
           }}
         >
           <MetricCard
@@ -665,6 +764,8 @@ export default async function DashboardPage() {
                 percent={firm.percent}
                 color={idx === 0 ? '#7c3aed' : '#f9a8d4'}
                 subtitle={`${firm.percent}% of lifetime`}
+                barHeight={5}
+                rank={idx + 1}
               />
             ))
           )}
@@ -718,6 +819,7 @@ export default async function DashboardPage() {
                       index === 0
                         ? 'color-mix(in srgb, var(--fpm-primary-pale) 85%, #fff)'
                         : 'transparent',
+                    border: index === 0 ? '1px solid #BFDBFE' : '1px solid transparent',
                   }}
                 >
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -751,8 +853,14 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ fontWeight: 750, fontVariantNumeric: 'tabular-nums' }}>
-                    {formatDisplayMoney(row.amount, row.currency)}
+                  <div
+                    style={{
+                      fontWeight: 750,
+                      fontVariantNumeric: 'tabular-nums',
+                      fontSize: index === 0 ? 15 : undefined,
+                    }}
+                  >
+                    {formatDisplayMoney(row.amount, row.currency, { decimals: 0, compact: true })}
                   </div>
                 </Link>
               ))}
@@ -788,6 +896,7 @@ export default async function DashboardPage() {
                       index === 0
                         ? 'color-mix(in srgb, var(--fpm-primary-pale) 85%, #fff)'
                         : 'transparent',
+                    border: index === 0 ? '1px solid #BFDBFE' : '1px solid transparent',
                   }}
                 >
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -809,7 +918,9 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ fontWeight: 750 }}>{row.amount}</div>
+                  <div style={{ fontWeight: 750, fontSize: index === 0 ? 15 : undefined }}>
+                    {row.amount}
+                  </div>
                 </div>
               ))}
             </div>
@@ -817,205 +928,218 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <section>
-        <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 750 }}>Real Accounts</h2>
-        <p style={{ margin: '0 0 14px', color: 'var(--fpm-text-muted)', fontSize: 14 }}>
-          Broker accounts, equity & P/L
-        </p>
+      {m.brokerAccountCount > 0 ? (
+        <section>
+          <SectionDivider title="Real Accounts" subtitle="Broker accounts, equity & P/L" />
 
-        <Card
-          style={{
-            background: 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 70%)',
-            marginBottom: 14,
-          }}
-        >
-          <div
+          <Card
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 16,
-              flexWrap: 'wrap',
-              alignItems: 'center',
+              background: m.brokerNetPlNegative
+                ? 'linear-gradient(135deg, #fff1f2 0%, #ffffff 70%)'
+                : 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 70%)',
+              marginTop: 14,
+              marginBottom: 14,
             }}
           >
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'var(--fpm-text-muted)',
-                }}
-              >
-                Current real equity
-              </div>
-              <div style={{ fontSize: 36, fontWeight: 750, letterSpacing: '-0.03em' }}>
-                {m.currentRealEquity}
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 14,
-                  marginTop: 8,
-                  fontSize: 13,
-                  color: 'var(--fpm-success-dark)',
-                  fontWeight: 600,
-                }}
-              >
-                <span>
-                  · {m.brokerAccountCount} Broker Account
-                  {m.brokerAccountCount === 1 ? '' : 's'}
-                </span>
-                <span>
-                  · {m.brokerCount} Broker{m.brokerCount === 1 ? '' : 's'}
-                </span>
-              </div>
-            </div>
             <div
               style={{
-                background: '#fff',
-                borderRadius: 14,
-                padding: '14px 18px',
-                minWidth: 160,
-                boxShadow: 'var(--fpm-shadow-card)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 16,
+                flexWrap: 'wrap',
+                alignItems: 'center',
               }}
             >
+              <div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--fpm-text-muted)',
+                  }}
+                >
+                  Current real equity
+                </div>
+                <div style={{ fontSize: 36, fontWeight: 750, letterSpacing: '-0.03em' }}>
+                  {m.currentRealEquity}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 14,
+                    marginTop: 8,
+                    fontSize: 13,
+                    color: m.brokerNetPlNegative
+                      ? 'var(--fpm-danger-dark, #be123c)'
+                      : 'var(--fpm-success-dark)',
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>
+                    · {m.brokerAccountCount} Broker Account
+                    {m.brokerAccountCount === 1 ? '' : 's'}
+                  </span>
+                  <span>
+                    · {m.brokerCount} Broker{m.brokerCount === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
               <div
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  color: 'var(--fpm-text-muted)',
+                  background: '#fff',
+                  borderRadius: 14,
+                  padding: '14px 18px',
+                  minWidth: 160,
+                  boxShadow: 'var(--fpm-shadow-card)',
                 }}
               >
-                NET P/L
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 750, color: 'var(--fpm-success-dark)' }}>
-                {m.brokerNetPl}
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--fpm-text-muted)', marginTop: 4 }}>
-                ROI: {m.brokerRoiHero}
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    color: 'var(--fpm-text-muted)',
+                  }}
+                >
+                  NET P/L
+                </div>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 750,
+                    color: m.brokerNetPlNegative
+                      ? 'var(--fpm-danger-dark, #be123c)'
+                      : 'var(--fpm-success-dark)',
+                  }}
+                >
+                  {m.brokerNetPl}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--fpm-text-muted)', marginTop: 4 }}>
+                  ROI: {m.brokerRoiHero}
+                </div>
               </div>
             </div>
+          </Card>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: 12,
+              marginBottom: 14,
+            }}
+          >
+            <MetricCard
+              label="Current equity"
+              value={m.currentRealEquity}
+              tone="purple"
+              accentValue
+            />
+            <MetricCard label="Net P/L" value={m.brokerNetPl} tone="green" accentValue />
+            <MetricCard label="ROI" value={m.brokerRoi} tone="teal" accentValue />
+            <MetricCard label="Total deposits" value={m.totalDeposits} tone="orange" accentValue />
+            <MetricCard
+              label="Total withdrawals"
+              value={m.totalBrokerWithdrawals}
+              tone="pink"
+              accentValue
+            />
+            <MetricCard label="Peak equity" value={m.peakEquity} tone="purple" accentValue />
+            <MetricCard
+              label="Trading drawdown"
+              value={m.tradingDrawdown}
+              helper="excl. withdrawals"
+              tone="teal"
+              accentValue
+            />
+            <MetricCard
+              label="Accounts"
+              value={String(m.brokerAccountCount)}
+              tone="orange"
+              accentValue
+            />
           </div>
-        </Card>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: 12,
-            marginBottom: 14,
-          }}
-        >
-          <MetricCard
-            label="Current equity"
-            value={m.currentRealEquity}
-            tone="purple"
-            accentValue
-          />
-          <MetricCard label="Net P/L" value={m.brokerNetPl} tone="green" accentValue />
-          <MetricCard label="ROI" value={m.brokerRoi} tone="teal" accentValue />
-          <MetricCard label="Total deposits" value={m.totalDeposits} tone="orange" accentValue />
-          <MetricCard
-            label="Total withdrawals"
-            value={m.totalBrokerWithdrawals}
-            tone="pink"
-            accentValue
-          />
-          <MetricCard label="Peak equity" value={m.peakEquity} tone="purple" accentValue />
-          <MetricCard
-            label="Trading drawdown"
-            value={m.tradingDrawdown}
-            helper="excl. withdrawals"
-            tone="teal"
-            accentValue
-          />
-          <MetricCard
-            label="Accounts"
-            value={String(m.brokerAccountCount)}
-            tone="orange"
-            accentValue
-          />
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 14,
-          }}
-        >
-          <Card style={{ background: 'color-mix(in srgb, #dcfce7 45%, #fff)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h3 style={{ margin: 0, fontSize: 16 }}>Profit by Broker</h3>
-              <Link href="/broker-accounts" style={{ fontSize: 13, color: 'var(--fpm-primary)' }}>
-                View all →
-              </Link>
-            </div>
-            {snapshot.profitByBroker.length === 0 ? (
-              <p style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>No broker P/L yet.</p>
-            ) : (
-              snapshot.profitByBroker.map((row) => {
-                const max = Math.max(
-                  ...snapshot.profitByBroker.map((r) => Math.abs(r.amountRaw)),
-                  1,
-                );
-                return (
-                  <ProgressRow
-                    key={row.name}
-                    name={row.name}
-                    amount={row.amount}
-                    percent={Math.round((Math.abs(row.amountRaw) / max) * 100)}
-                    color="#16a34a"
-                  />
-                );
-              })
-            )}
-          </Card>
-          <Card style={{ background: 'color-mix(in srgb, #ede9fe 50%, #fff)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h3 style={{ margin: 0, fontSize: 16 }}>Profit by Account</h3>
-              <Link href="/broker-accounts" style={{ fontSize: 13, color: 'var(--fpm-primary)' }}>
-                View all →
-              </Link>
-            </div>
-            {snapshot.profitByAccount.length === 0 ? (
-              <p style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>No account P/L yet.</p>
-            ) : (
-              snapshot.profitByAccount.map((row) => {
-                const max = Math.max(
-                  ...snapshot.profitByAccount.map((r) => Math.abs(r.amountRaw)),
-                  1,
-                );
-                return (
-                  <ProgressRow
-                    key={row.name}
-                    name={row.name}
-                    amount={row.amount}
-                    percent={Math.round((Math.abs(row.amountRaw) / max) * 100)}
-                    color="#7c3aed"
-                  />
-                );
-              })
-            )}
-          </Card>
-        </div>
-      </section>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 14,
+            }}
+          >
+            <Card style={{ background: 'color-mix(in srgb, #dcfce7 45%, #fff)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 16 }}>Profit by Broker</h3>
+                <Link href="/broker-accounts" style={{ fontSize: 13, color: 'var(--fpm-primary)' }}>
+                  View all →
+                </Link>
+              </div>
+              {snapshot.profitByBroker.length === 0 ? (
+                <p style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>No broker P/L yet.</p>
+              ) : (
+                snapshot.profitByBroker.map((row) => {
+                  const max = Math.max(
+                    ...snapshot.profitByBroker.map((r) => Math.abs(r.amountRaw)),
+                    1,
+                  );
+                  return (
+                    <ProgressRow
+                      key={row.name}
+                      name={row.name}
+                      amount={row.amount}
+                      percent={Math.round((Math.abs(row.amountRaw) / max) * 100)}
+                      color={row.amountRaw >= 0 ? '#16a34a' : '#dc2626'}
+                      barHeight={3}
+                    />
+                  );
+                })
+              )}
+            </Card>
+            <Card style={{ background: 'color-mix(in srgb, #ede9fe 50%, #fff)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 16 }}>Profit by Account</h3>
+                <Link href="/broker-accounts" style={{ fontSize: 13, color: 'var(--fpm-primary)' }}>
+                  View all →
+                </Link>
+              </div>
+              {snapshot.profitByAccount.length === 0 ? (
+                <p style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>No account P/L yet.</p>
+              ) : (
+                snapshot.profitByAccount.map((row) => {
+                  const max = Math.max(
+                    ...snapshot.profitByAccount.map((r) => Math.abs(r.amountRaw)),
+                    1,
+                  );
+                  return (
+                    <ProgressRow
+                      key={row.name}
+                      name={row.name}
+                      amount={row.amount}
+                      percent={Math.round((Math.abs(row.amountRaw) / max) * 100)}
+                      color={row.amountRaw >= 0 ? '#16a34a' : '#dc2626'}
+                      barHeight={3}
+                    />
+                  );
+                })
+              )}
+            </Card>
+          </div>
+        </section>
+      ) : null}
 
       <section>
-        <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 750 }}>
-          Combined Business Overview
-        </h2>
-        <p style={{ margin: '0 0 14px', color: 'var(--fpm-text-muted)', fontSize: 14 }}>
-          Total across funded + real accounts
-        </p>
+        <SectionDivider
+          title="Combined Business Overview"
+          subtitle="Total across funded + real accounts"
+        />
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: 14,
+            marginTop: 14,
           }}
         >
           <Card style={{ background: 'linear-gradient(160deg, #dbeafe, #fff)' }}>
@@ -1056,7 +1180,9 @@ export default async function DashboardPage() {
                 fontSize: 32,
                 fontWeight: 750,
                 margin: '8px 0',
-                color: 'var(--fpm-success-dark)',
+                color: combinedProfitNegative
+                  ? 'var(--fpm-danger-dark, #be123c)'
+                  : 'var(--fpm-success-dark)',
               }}
             >
               {m.combinedGeneratedProfit}
