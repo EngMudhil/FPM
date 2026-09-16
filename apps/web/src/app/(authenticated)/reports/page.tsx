@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import {
   Alert,
   Badge,
-  Button,
   Card,
   EmptyState,
   MetricCard,
@@ -16,6 +15,7 @@ import {
   THead,
   TR,
 } from '@fpm/ui';
+import { SoftFilterForm } from '@/components/soft-filter-form';
 import { getReportsAction } from '@/server/actions/reports';
 
 function statusTone(status: string) {
@@ -60,8 +60,8 @@ export default async function ReportsPage({
         {snapshot.deferred.join(' · ')}
       </Alert>
 
-      <form
-        method="get"
+      <SoftFilterForm
+        submitLabel="Apply"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -93,10 +93,7 @@ export default async function ReportsPage({
             <option value="GBP">GBP</option>
           </Select>
         </label>
-        <Button type="submit" variant="secondary" size="sm">
-          Apply
-        </Button>
-      </form>
+      </SoftFilterForm>
 
       <div
         style={{

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import {
   createCertificate,
   deleteCertificate,
@@ -17,8 +17,7 @@ import { idSchema } from '../validation';
 import { z } from 'zod';
 
 async function requireCertWorkspace() {
-  const access = await requirePrimaryWorkspace();
-  return requireWorkspaceRole(access.workspace.id, 'MEMBER');
+  return requirePrimaryWorkspaceRole('MEMBER');
 }
 
 const metaSchema = z.object({

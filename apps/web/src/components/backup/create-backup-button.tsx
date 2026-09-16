@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@fpm/ui';
 import { createBackupAction } from '@/server/actions/backup';
 
 export function CreateBackupButton() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -18,7 +20,7 @@ export function CreateBackupButton() {
           startTransition(async () => {
             const result = await createBackupAction();
             if (!result.ok) setError(result.error.message);
-            else window.location.reload();
+            else router.refresh();
           });
         }}
       >

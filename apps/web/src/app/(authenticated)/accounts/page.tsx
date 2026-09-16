@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   Badge,
-  Button,
   EmptyState,
   PageHeader,
   SearchInput,
@@ -13,6 +12,7 @@ import {
   THead,
   TR,
 } from '@fpm/ui';
+import { SoftFilterForm } from '@/components/soft-filter-form';
 import { listAccountsAction, listFirmOptionsAction } from '@/server/actions/accounts';
 import { accountDisplayName } from '@/server/services/accounts';
 
@@ -68,8 +68,7 @@ export default async function AccountsPage({
         }
       />
 
-      <form
-        method="get"
+      <SoftFilterForm
         style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -99,13 +98,10 @@ export default async function AccountsPage({
           <option value="PAUSED">Paused</option>
           <option value="CLOSED">Closed</option>
         </Select>
-        <Button type="submit" variant="secondary" size="sm">
-          Filter
-        </Button>
         <span style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>
           {total} account{total === 1 ? '' : 's'}
         </span>
-      </form>
+      </SoftFilterForm>
 
       {items.length === 0 ? (
         <EmptyState

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Button } from './button';
 
 export type DialogProps = {
@@ -58,8 +58,9 @@ export type ConfirmationDialogProps = {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  pendingLabel?: string;
   destructive?: boolean;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 };
 
@@ -69,22 +70,40 @@ export function ConfirmationDialog({
   description,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  pendingLabel = 'Working…',
   destructive = false,
   onConfirm,
   onCancel,
 }: ConfirmationDialogProps) {
+  const [pending, startTransition] = useTransition();
+  const [busy, setBusy] = useState(false);
+  const isPending = pending || busy;
+
+  useEffect(() => {
+    if (!open) setBusy(false);
+  }, [open]);
+
   return (
     <Dialog
       open={open}
       title={title}
-      onClose={onCancel}
+      onClose={isPending ? () => undefined : onCancel}
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel} disabled={isPending}>
             {cancelLabel}
           </Button>
-          <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm}>
-            {confirmLabel}
+          <Button
+            variant={destructive ? 'danger' : 'primary'}
+            disabled={isPending}
+            onClick={() => {
+              setBusy(true);
+              startTransition(() => {
+                void Promise.resolve(onConfirm()).finally(() => setBusy(false));
+              });
+            }}
+          >
+            {isPending ? pendingLabel : confirmLabel}
           </Button>
         </>
       }

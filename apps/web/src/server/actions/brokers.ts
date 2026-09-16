@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import { idSchema } from '../validation';
 import {
   addBrokerDeposit,
@@ -34,8 +34,7 @@ const positiveMoneySchema = z
   .refine((v) => Number(v) > 0, 'Must be positive');
 
 async function requireBrokerWorkspace() {
-  const access = await requirePrimaryWorkspace();
-  return requireWorkspaceRole(access.workspace.id, 'MEMBER');
+  return requirePrimaryWorkspaceRole('MEMBER');
 }
 
 function parseDate(value: string): Date {

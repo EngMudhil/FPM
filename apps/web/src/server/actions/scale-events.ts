@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import { listAccounts } from '../services/accounts';
 import {
   createScaleEvent,
@@ -23,8 +23,7 @@ import {
 } from '../validation/scale-events';
 
 async function requireScaleWorkspace() {
-  const access = await requirePrimaryWorkspace();
-  return requireWorkspaceRole(access.workspace.id, 'MEMBER');
+  return requirePrimaryWorkspaceRole('MEMBER');
 }
 
 export async function listScaleEventsAction(raw: Record<string, unknown>) {

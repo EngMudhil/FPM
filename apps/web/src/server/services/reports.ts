@@ -59,12 +59,14 @@ export async function getReportsSnapshot(
   const [withdrawalRows, accountRows] = await Promise.all([
     db
       .select({
-        withdrawal: withdrawals,
-        firmId: firms.id,
+        amount: withdrawals.amount,
+        currency: withdrawals.currency,
+        status: withdrawals.status,
+        requestedAt: withdrawals.requestedAt,
+        receivedAt: withdrawals.receivedAt,
         firmName: firms.name,
         accountLabel: tradingAccounts.label,
         accountNumber: tradingAccounts.accountNumber,
-        accountId: tradingAccounts.id,
       })
       .from(withdrawals)
       .innerJoin(tradingAccounts, eq(withdrawals.tradingAccountId, tradingAccounts.id))
@@ -77,11 +79,11 @@ export async function getReportsSnapshot(
   ]);
 
   const records: WithdrawalRecord[] = withdrawalRows.map((row) => ({
-    amount: row.withdrawal.amount,
-    currency: row.withdrawal.currency,
-    status: row.withdrawal.status,
-    requestedAt: row.withdrawal.requestedAt,
-    receivedAt: row.withdrawal.receivedAt,
+    amount: row.amount,
+    currency: row.currency,
+    status: row.status,
+    requestedAt: row.requestedAt,
+    receivedAt: row.receivedAt,
   }));
 
   const filteredForTotals = currencyFilter
@@ -95,11 +97,11 @@ export async function getReportsSnapshot(
   const byFirm = sumRecognizedByKey(
     withdrawalRows.map((row) => ({
       key: row.firmName,
-      amount: row.withdrawal.amount,
-      currency: row.withdrawal.currency,
-      status: row.withdrawal.status,
-      requestedAt: row.withdrawal.requestedAt,
-      receivedAt: row.withdrawal.receivedAt,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      requestedAt: row.requestedAt,
+      receivedAt: row.receivedAt,
     })),
     range,
     currencyFilter,
@@ -112,11 +114,11 @@ export async function getReportsSnapshot(
         accountNumber: row.accountNumber,
         firmName: row.firmName,
       }),
-      amount: row.withdrawal.amount,
-      currency: row.withdrawal.currency,
-      status: row.withdrawal.status,
-      requestedAt: row.withdrawal.requestedAt,
-      receivedAt: row.withdrawal.receivedAt,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      requestedAt: row.requestedAt,
+      receivedAt: row.receivedAt,
     })),
     range,
     currencyFilter,
@@ -155,9 +157,7 @@ export async function getReportsSnapshot(
     incomeByAccount: Object.entries(byAccount)
       .map(([label, amounts]) => ({ label, amounts: formatMoneyMap(amounts) }))
       .sort((a, b) => a.label.localeCompare(b.label)),
-    withdrawalStatusDistribution: countWithdrawalsByStatus(
-      withdrawalRows.map((row) => row.withdrawal),
-    ),
+    withdrawalStatusDistribution: countWithdrawalsByStatus(withdrawalRows),
     phaseDistribution,
     deferred: [
       'S3-compatible storage remains FUTURE (ADR-015)',

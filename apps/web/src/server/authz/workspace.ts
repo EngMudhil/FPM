@@ -1,5 +1,6 @@
 import { createId, workspaceMembers, workspaces, type WorkspaceRole } from '@fpm/db';
 import { and, eq } from 'drizzle-orm';
+import { cache } from 'react';
 import { getDb } from '../db';
 import { AppError } from '../errors';
 import { requireAuthenticatedUser } from '../auth/session';
@@ -45,8 +46,8 @@ export async function requireWorkspaceRole(workspaceId: string, minimumRole: Wor
   return access;
 }
 
-/** Resolves the caller's primary owned/member workspace (single-operator default). */
-export async function requirePrimaryWorkspace() {
+/** Resolves the caller's primary owned/member workspace (single-operator default). Deduped per RSC request. */
+export const requirePrimaryWorkspace = cache(async () => {
   const user = await requireAuthenticatedUser();
   const db = getDb();
   const rows = await db
@@ -67,7 +68,24 @@ export async function requirePrimaryWorkspace() {
     user,
     workspace: row.workspace,
     role: row.membership.role,
+    membershipId: row.membership.id,
   };
+});
+
+export function hasMinimumWorkspaceRole(role: WorkspaceRole, minimumRole: WorkspaceRole): boolean {
+  return roleRank[role] >= roleRank[minimumRole];
+}
+
+/**
+ * Primary-workspace authz without a second membership query.
+ * Prefer this over `requirePrimaryWorkspace` + `requireWorkspaceRole(workspace.id, …)`.
+ */
+export async function requirePrimaryWorkspaceRole(minimumRole: WorkspaceRole) {
+  const access = await requirePrimaryWorkspace();
+  if (!hasMinimumWorkspaceRole(access.role, minimumRole)) {
+    throw new AppError('FORBIDDEN', 'Insufficient workspace role', 403);
+  }
+  return access;
 }
 
 export async function createOwnedWorkspace(input: {

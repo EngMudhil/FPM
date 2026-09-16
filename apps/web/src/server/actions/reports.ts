@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import { getReportsSnapshot } from '../services/reports';
 
 const reportsQuerySchema = z.object({
@@ -18,8 +18,7 @@ const reportsQuerySchema = z.object({
 
 export async function getReportsAction(raw: Record<string, unknown> = {}) {
   try {
-    const access = await requirePrimaryWorkspace();
-    await requireWorkspaceRole(access.workspace.id, 'VIEWER');
+    const access = await requirePrimaryWorkspaceRole('VIEWER');
     const parsed = reportsQuerySchema.safeParse(raw);
     if (!parsed.success) {
       throw new AppError('VALIDATION', 'Invalid reports query', 400, parsed.error.flatten());

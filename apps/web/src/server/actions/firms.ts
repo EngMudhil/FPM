@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import {
   archiveFirm,
   createFirm,
@@ -22,8 +22,7 @@ import {
 } from '../validation/firms';
 
 async function requireFirmWorkspace(minimumRole: 'MEMBER' | 'ADMIN' = 'MEMBER') {
-  const access = await requirePrimaryWorkspace();
-  return requireWorkspaceRole(access.workspace.id, minimumRole);
+  return requirePrimaryWorkspaceRole(minimumRole);
 }
 
 export async function listFirmsAction(raw: Record<string, unknown>) {
