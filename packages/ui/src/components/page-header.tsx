@@ -1,4 +1,7 @@
+'use client';
+
 import type { ReactNode } from 'react';
+import { FpmLink } from './fpm-link';
 
 export type BreadcrumbItem = {
   label: string;
@@ -21,7 +24,9 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
           >
             {index > 0 ? <span className="fpm-breadcrumbs__sep">/</span> : null}
             {item.href && !isLast ? (
-              <a href={item.href}>{item.label}</a>
+              <FpmLink href={item.href} prefetch>
+                {item.label}
+              </FpmLink>
             ) : (
               <span aria-current={isLast ? 'page' : undefined}>{item.label}</span>
             )}

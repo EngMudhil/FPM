@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { AppShell, Button } from '@fpm/ui';
+import { AppShell, Button, FpmLinkProvider } from '@fpm/ui';
+import { SoftLink } from '@/components/soft-link';
 
 export function AuthenticatedShell({
   userEmail,
@@ -17,20 +18,22 @@ export function AuthenticatedShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <AppShell
-      pathname={pathname}
-      userEmail={userEmail}
-      mobileMenuOpen={mobileOpen}
-      onMobileMenuOpenChange={setMobileOpen}
-      footerAction={
-        <form action={logoutAction}>
-          <Button type="submit" variant="ghost" size="sm">
-            Sign out
-          </Button>
-        </form>
-      }
-    >
-      {children}
-    </AppShell>
+    <FpmLinkProvider linkComponent={SoftLink}>
+      <AppShell
+        pathname={pathname}
+        userEmail={userEmail}
+        mobileMenuOpen={mobileOpen}
+        onMobileMenuOpenChange={setMobileOpen}
+        footerAction={
+          <form action={logoutAction}>
+            <Button type="submit" variant="ghost" size="sm">
+              Sign out
+            </Button>
+          </form>
+        }
+      >
+        {children}
+      </AppShell>
+    </FpmLinkProvider>
   );
 }
