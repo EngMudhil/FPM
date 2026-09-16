@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import {
   archiveAccount,
   createAccount,
@@ -21,8 +21,7 @@ import {
 import { idSchema } from '../validation';
 
 async function requireAccountWorkspace(minimumRole: 'MEMBER' | 'ADMIN' = 'MEMBER') {
-  const access = await requirePrimaryWorkspace();
-  return requireWorkspaceRole(access.workspace.id, minimumRole);
+  return requirePrimaryWorkspaceRole(minimumRole);
 }
 
 export async function listAccountsAction(raw: Record<string, unknown>) {

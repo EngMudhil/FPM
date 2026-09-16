@@ -244,22 +244,25 @@ export async function getDashboardSnapshot(
   const [
     withdrawalRows,
     accountRows,
-    recentWd,
     brokerAccountRows,
     brokerRows,
     snapshotRows,
     depositRows,
     brokerWdRows,
-    firmRows,
+    firmCountRows,
     certCountRows,
   ] = await Promise.all([
     db
       .select({
-        withdrawal: withdrawals,
+        id: withdrawals.id,
+        amount: withdrawals.amount,
+        currency: withdrawals.currency,
+        status: withdrawals.status,
+        requestedAt: withdrawals.requestedAt,
+        receivedAt: withdrawals.receivedAt,
         firmName: firms.name,
         accountLabel: tradingAccounts.label,
         accountNumber: tradingAccounts.accountNumber,
-        firmId: firms.id,
       })
       .from(withdrawals)
       .innerJoin(tradingAccounts, eq(withdrawals.tradingAccountId, tradingAccounts.id))
@@ -278,28 +281,46 @@ export async function getDashboardSnapshot(
       .where(and(eq(tradingAccounts.workspaceId, workspaceId), isNull(tradingAccounts.archivedAt))),
     db
       .select({
-        withdrawal: withdrawals,
-        firmName: firms.name,
-        accountLabel: tradingAccounts.label,
-        accountNumber: tradingAccounts.accountNumber,
+        id: brokerAccounts.id,
+        brokerId: brokerAccounts.brokerId,
+        accountName: brokerAccounts.accountName,
+        currency: brokerAccounts.currency,
       })
-      .from(withdrawals)
-      .innerJoin(tradingAccounts, eq(withdrawals.tradingAccountId, tradingAccounts.id))
-      .innerJoin(firms, eq(tradingAccounts.firmId, firms.id))
-      .where(eq(withdrawals.workspaceId, workspaceId))
-      .orderBy(desc(withdrawals.requestedAt))
-      .limit(6),
-    db.select().from(brokerAccounts).where(eq(brokerAccounts.workspaceId, workspaceId)),
-    db.select().from(brokers).where(eq(brokers.workspaceId, workspaceId)),
+      .from(brokerAccounts)
+      .where(eq(brokerAccounts.workspaceId, workspaceId)),
     db
-      .select()
+      .select({ id: brokers.id, name: brokers.name })
+      .from(brokers)
+      .where(eq(brokers.workspaceId, workspaceId)),
+    db
+      .select({
+        id: equitySnapshots.id,
+        brokerAccountId: equitySnapshots.brokerAccountId,
+        equity: equitySnapshots.equity,
+        snapshotDate: equitySnapshots.snapshotDate,
+        currency: equitySnapshots.currency,
+      })
       .from(equitySnapshots)
       .where(eq(equitySnapshots.workspaceId, workspaceId))
       .orderBy(desc(equitySnapshots.snapshotDate)),
-    db.select().from(brokerDeposits).where(eq(brokerDeposits.workspaceId, workspaceId)),
-    db.select().from(brokerWithdrawals).where(eq(brokerWithdrawals.workspaceId, workspaceId)),
     db
-      .select()
+      .select({
+        brokerAccountId: brokerDeposits.brokerAccountId,
+        amount: brokerDeposits.amount,
+        currency: brokerDeposits.currency,
+      })
+      .from(brokerDeposits)
+      .where(eq(brokerDeposits.workspaceId, workspaceId)),
+    db
+      .select({
+        brokerAccountId: brokerWithdrawals.brokerAccountId,
+        amount: brokerWithdrawals.amount,
+        currency: brokerWithdrawals.currency,
+      })
+      .from(brokerWithdrawals)
+      .where(eq(brokerWithdrawals.workspaceId, workspaceId)),
+    db
+      .select({ value: count() })
       .from(firms)
       .where(and(eq(firms.workspaceId, workspaceId), isNull(firms.archivedAt))),
     db
@@ -308,7 +329,18 @@ export async function getDashboardSnapshot(
       .where(eq(certificates.workspaceId, workspaceId)),
   ]);
 
-  const records = withdrawalRows.map((r) => toRecord(r.withdrawal));
+  const records = withdrawalRows.map((r) =>
+    toRecord({
+      amount: r.amount,
+      currency: r.currency,
+      status: r.status,
+      requestedAt: r.requestedAt,
+      receivedAt: r.receivedAt,
+    }),
+  );
+  const recentWd = [...withdrawalRows].sort(
+    (a, b) => b.requestedAt.getTime() - a.requestedAt.getTime() || b.id.localeCompare(a.id),
+  );
   const monthBounds = utcMonthBounds(now);
 
   const LOOKBACK_QUARTERS = 16;
@@ -378,20 +410,28 @@ export async function getDashboardSnapshot(
       : `${countRecognizedInRange(records, yearBounds.start, yearBounds.end, currency)} payouts`;
 
   const activeAccountCount = accountRows.filter((a) => a.phase === 'ACTIVE').length;
-  const statusCounts = countWithdrawalsByStatus(withdrawalRows.map((r) => r.withdrawal));
+  const statusCounts = countWithdrawalsByStatus(
+    withdrawalRows.map((r) => ({
+      amount: r.amount,
+      currency: r.currency,
+      status: r.status,
+      requestedAt: r.requestedAt,
+      receivedAt: r.receivedAt,
+    })),
+  );
 
   // Largest withdrawal detail
   let largestFirm: string | null = null;
   let largestDate: string | null = null;
   let largestAmount = Money.fromString('0', currency);
   for (const row of withdrawalRows) {
-    if (!isRecognizedPayout(row.withdrawal) || row.withdrawal.currency !== currency) continue;
-    const money = Money.fromString(row.withdrawal.amount, row.withdrawal.currency);
+    if (!isRecognizedPayout(row) || row.currency !== currency) continue;
+    const money = Money.fromString(row.amount, row.currency);
     if (money.amount.greaterThan(largestAmount.amount)) {
       largestAmount = money;
       largestFirm = row.firmName;
-      largestDate = row.withdrawal.receivedAt
-        ? row.withdrawal.receivedAt.toLocaleDateString('en-US', {
+      largestDate = row.receivedAt
+        ? row.receivedAt.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric',
@@ -473,7 +513,7 @@ export async function getDashboardSnapshot(
   // Income by firm
   const byFirm = sumRecognizedByKey(
     withdrawalRows.map((r) => ({
-      ...toRecord(r.withdrawal),
+      ...toRecord(r),
       key: r.firmName,
     })),
   );
@@ -496,12 +536,46 @@ export async function getDashboardSnapshot(
     .map(({ name, amount, percent }) => ({ name, amount, percent }))
     .slice(0, 5);
 
-  // Broker metrics
+  // Broker metrics — group ledgers once (avoid per-account .filter scans)
   const latestByAccount = new Map<string, { equity: string; currency: string }>();
   for (const snap of snapshotRows) {
     if (!latestByAccount.has(snap.brokerAccountId)) {
       latestByAccount.set(snap.brokerAccountId, { equity: snap.equity, currency: snap.currency });
     }
+  }
+
+  const depositsByAccount = new Map<
+    string,
+    Array<{ brokerAccountId: string; amount: string; currency: string }>
+  >();
+  for (const d of depositRows) {
+    const list = depositsByAccount.get(d.brokerAccountId);
+    if (list) list.push(d);
+    else depositsByAccount.set(d.brokerAccountId, [d]);
+  }
+  const brokerWdByAccount = new Map<
+    string,
+    Array<{ brokerAccountId: string; amount: string; currency: string }>
+  >();
+  for (const w of brokerWdRows) {
+    const list = brokerWdByAccount.get(w.brokerAccountId);
+    if (list) list.push(w);
+    else brokerWdByAccount.set(w.brokerAccountId, [w]);
+  }
+  const snapsByAccount = new Map<
+    string,
+    Array<{
+      id: string;
+      brokerAccountId: string;
+      equity: string;
+      snapshotDate: Date;
+      currency: string;
+    }>
+  >();
+  for (const snap of snapshotRows) {
+    const list = snapsByAccount.get(snap.brokerAccountId);
+    if (list) list.push(snap);
+    else snapsByAccount.set(snap.brokerAccountId, [snap]);
   }
 
   let totalDeposits = Money.fromString('0', currency);
@@ -523,8 +597,8 @@ export async function getDashboardSnapshot(
   for (const account of brokerAccountRows) {
     if (account.currency !== currency) continue;
     const latest = latestByAccount.get(account.id);
-    const deposits = depositRows.filter((d) => d.brokerAccountId === account.id);
-    const wds = brokerWdRows.filter((w) => w.brokerAccountId === account.id);
+    const deposits = depositsByAccount.get(account.id) ?? [];
+    const wds = brokerWdByAccount.get(account.id) ?? [];
     for (const d of deposits) {
       if (d.currency === currency) {
         totalDeposits = totalDeposits.add(Money.fromString(d.amount, d.currency));
@@ -557,7 +631,7 @@ export async function getDashboardSnapshot(
         amountRaw: Number(money.toString()),
       });
     }
-    for (const snap of snapshotRows.filter((s) => s.brokerAccountId === account.id)) {
+    for (const snap of snapsByAccount.get(account.id) ?? []) {
       peakCandidates.push({
         id: snap.id,
         equity: snap.equity,
@@ -651,7 +725,7 @@ export async function getDashboardSnapshot(
       recognizedPayoutCount: countRecognizedPayouts(records),
       activeAccountCount,
       totalAccountCount: accountRows.length,
-      firmCount: firmRows.length,
+      firmCount: firmCountRows[0]?.value ?? 0,
       certificateCount: certCountRows[0]?.value ?? 0,
       paidWithdrawalCount: statusCounts.PAID,
       pendingWithdrawalCount: pendingCount,
@@ -707,14 +781,14 @@ export async function getDashboardSnapshot(
       minQuarterOffset,
       minYearOffset,
     },
-    recentWithdrawals: recentWd.map((row) => ({
-      id: row.withdrawal.id,
-      amount: row.withdrawal.amount,
-      currency: row.withdrawal.currency,
-      status: row.withdrawal.status,
+    recentWithdrawals: recentWd.slice(0, 6).map((row) => ({
+      id: row.id,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
       firmName: row.firmName,
-      requestedAt: row.withdrawal.requestedAt,
-      receivedAt: row.withdrawal.receivedAt,
+      requestedAt: row.requestedAt,
+      receivedAt: row.receivedAt,
       accountLabel: accountDisplayName({
         label: row.accountLabel,
         accountNumber: row.accountNumber,

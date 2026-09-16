@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspace, requirePrimaryWorkspaceRole } from '../authz/workspace';
 import { writeAuditLog } from '../services/audit';
 import {
   changeUserPassword,
@@ -26,8 +26,7 @@ import {
 } from '../validation/workspace';
 
 async function requireSettingsWorkspace(minimumRole: 'VIEWER' | 'ADMIN' | 'OWNER' = 'VIEWER') {
-  const access = await requirePrimaryWorkspace();
-  return requireWorkspaceRole(access.workspace.id, minimumRole);
+  return requirePrimaryWorkspaceRole(minimumRole);
 }
 
 export async function getWorkspaceSettingsAction() {

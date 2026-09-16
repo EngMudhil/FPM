@@ -68,8 +68,25 @@ export const requirePrimaryWorkspace = cache(async () => {
     user,
     workspace: row.workspace,
     role: row.membership.role,
+    membershipId: row.membership.id,
   };
 });
+
+export function hasMinimumWorkspaceRole(role: WorkspaceRole, minimumRole: WorkspaceRole): boolean {
+  return roleRank[role] >= roleRank[minimumRole];
+}
+
+/**
+ * Primary-workspace authz without a second membership query.
+ * Prefer this over `requirePrimaryWorkspace` + `requireWorkspaceRole(workspace.id, …)`.
+ */
+export async function requirePrimaryWorkspaceRole(minimumRole: WorkspaceRole) {
+  const access = await requirePrimaryWorkspace();
+  if (!hasMinimumWorkspaceRole(access.role, minimumRole)) {
+    throw new AppError('FORBIDDEN', 'Insufficient workspace role', 403);
+  }
+  return access;
+}
 
 export async function createOwnedWorkspace(input: {
   userId: string;

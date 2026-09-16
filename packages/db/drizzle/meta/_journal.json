@@ -71,6 +71,13 @@
       "when": 1789493000000,
       "tag": "0009_restore_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789494000000,
+      "tag": "0010_perf_composite_indexes",
+      "breakpoints": true
     }
   ]
 }

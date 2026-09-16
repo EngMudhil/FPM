@@ -181,6 +181,7 @@ export const tradingAccounts = pgTable(
     index('trading_accounts_firm_id_idx').on(table.firmId),
     index('trading_accounts_phase_idx').on(table.phase),
     index('trading_accounts_archived_at_idx').on(table.archivedAt),
+    index('trading_accounts_workspace_archived_idx').on(table.workspaceId, table.archivedAt),
   ],
 );
 
@@ -208,6 +209,8 @@ export const withdrawals = pgTable(
     index('withdrawals_status_idx').on(table.status),
     index('withdrawals_received_at_idx').on(table.receivedAt),
     index('withdrawals_requested_at_idx').on(table.requestedAt),
+    index('withdrawals_workspace_requested_at_idx').on(table.workspaceId, table.requestedAt),
+    index('withdrawals_workspace_status_idx').on(table.workspaceId, table.status),
   ],
 );
 

@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import { listAuditLogs } from '../services/audit';
 
 const querySchema = z.object({
@@ -14,8 +14,7 @@ const querySchema = z.object({
 
 export async function listAuditLogsAction(raw: Record<string, unknown> = {}) {
   try {
-    const access = await requirePrimaryWorkspace();
-    await requireWorkspaceRole(access.workspace.id, 'ADMIN');
+    const access = await requirePrimaryWorkspaceRole('ADMIN');
     const parsed = querySchema.safeParse(raw);
     if (!parsed.success) {
       throw new AppError('VALIDATION', 'Invalid audit query', 400, parsed.error.flatten());

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '../db';
 import { AppError, toPublicError } from '../errors';
-import { requirePrimaryWorkspace, requireWorkspaceRole } from '../authz/workspace';
+import { requirePrimaryWorkspaceRole } from '../authz/workspace';
 import {
   confirmAndRunRestore,
   createRestoreJobFromUpload,
@@ -12,8 +12,7 @@ import {
 
 export async function listRestoreJobsAction() {
   try {
-    const access = await requirePrimaryWorkspace();
-    await requireWorkspaceRole(access.workspace.id, 'ADMIN');
+    const access = await requirePrimaryWorkspaceRole('ADMIN');
     const items = await listRestoreJobs(getDb(), access.workspace.id);
     return { ok: true as const, items };
   } catch (error) {
@@ -23,8 +22,7 @@ export async function listRestoreJobsAction() {
 
 export async function uploadRestoreZipAction(formData: FormData) {
   try {
-    const access = await requirePrimaryWorkspace();
-    await requireWorkspaceRole(access.workspace.id, 'ADMIN');
+    const access = await requirePrimaryWorkspaceRole('ADMIN');
     const file = formData.get('file');
     if (!(file instanceof File)) throw new AppError('VALIDATION', 'ZIP file required', 400);
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -42,8 +40,7 @@ export async function uploadRestoreZipAction(formData: FormData) {
 
 export async function confirmRestoreAction(formData: FormData) {
   try {
-    const access = await requirePrimaryWorkspace();
-    await requireWorkspaceRole(access.workspace.id, 'ADMIN');
+    const access = await requirePrimaryWorkspaceRole('ADMIN');
     const result = await confirmAndRunRestore(getDb(), {
       workspaceId: access.workspace.id,
       userId: access.user.id,
