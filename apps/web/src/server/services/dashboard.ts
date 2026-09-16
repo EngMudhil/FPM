@@ -217,6 +217,12 @@ export type DashboardSnapshot = {
   }>;
   profitByBroker: Array<{ name: string; amount: string; amountRaw: number }>;
   profitByAccount: Array<{ name: string; amount: string; amountRaw: number }>;
+  periodNav: {
+    quarterOffset: number;
+    yearOffset: number;
+    minQuarterOffset: number;
+    minYearOffset: number;
+  };
   recentWithdrawals: Array<{
     id: string;
     amount: string;
@@ -233,6 +239,7 @@ export async function getDashboardSnapshot(
   db: Database,
   workspaceId: string,
   now: Date = new Date(),
+  opts: { quarterOffset?: number; yearOffset?: number } = {},
 ): Promise<DashboardSnapshot> {
   const [
     withdrawalRows,
@@ -303,8 +310,23 @@ export async function getDashboardSnapshot(
 
   const records = withdrawalRows.map((r) => toRecord(r.withdrawal));
   const monthBounds = utcMonthBounds(now);
-  const quarterBounds = utcPeriodBounds('quarter', now)!;
-  const yearBounds = utcPeriodBounds('year', now)!;
+
+  let earliestReceived: Date | null = null;
+  for (const r of records) {
+    if (!isRecognizedPayout(r) || !r.receivedAt) continue;
+    if (!earliestReceived || r.receivedAt < earliestReceived) earliestReceived = r.receivedAt;
+  }
+  const minQuarterOffset = earliestReceived ? -quarterIndexDiff(earliestReceived, now) : 0;
+  const minYearOffset = earliestReceived
+    ? earliestReceived.getUTCFullYear() - now.getUTCFullYear()
+    : 0;
+
+  const quarterOffset = clampOffset(opts.quarterOffset ?? 0, minQuarterOffset, 0);
+  const yearOffset = clampOffset(opts.yearOffset ?? 0, minYearOffset, 0);
+  const quarterRef = shiftByQuarters(now, quarterOffset);
+  const yearRef = shiftByYears(now, yearOffset);
+  const quarterBounds = utcPeriodBounds('quarter', quarterRef)!;
+  const yearBounds = utcPeriodBounds('year', yearRef)!;
   const sizeRows = accountRows.map((row) => ({
     initialSize: row.initialSize,
     currentSize: row.currentSize,
@@ -334,9 +356,21 @@ export async function getDashboardSnapshot(
   const lastRaw = amountIn(lastMap, currency);
   const change = momChangePercent(thisRaw, lastRaw);
 
-  const q = Math.floor(now.getUTCMonth() / 3) + 1;
-  const quarterLabel = `Q${q} ${now.getUTCFullYear()} · Now`;
-  const yearLabel = `${now.getUTCFullYear()} · Now`;
+  const q = Math.floor(quarterRef.getUTCMonth() / 3) + 1;
+  const quarterLabel =
+    quarterOffset === 0
+      ? `Q${q} ${quarterRef.getUTCFullYear()} · Now`
+      : `Q${q} ${quarterRef.getUTCFullYear()}`;
+  const yearLabel =
+    yearOffset === 0 ? `${yearRef.getUTCFullYear()} · Now` : `${yearRef.getUTCFullYear()}`;
+  const quarterHelper =
+    quarterOffset === 0
+      ? `${countRecognizedInRange(records, quarterBounds.start, quarterBounds.end, currency)} payouts this quarter`
+      : `${countRecognizedInRange(records, quarterBounds.start, quarterBounds.end, currency)} payouts`;
+  const yearHelper =
+    yearOffset === 0
+      ? `${countRecognizedInRange(records, yearBounds.start, yearBounds.end, currency)} payouts this year`
+      : `${countRecognizedInRange(records, yearBounds.start, yearBounds.end, currency)} payouts`;
 
   const activeAccountCount = accountRows.filter((a) => a.phase === 'ACTIVE').length;
   const statusCounts = countWithdrawalsByStatus(withdrawalRows.map((r) => r.withdrawal));
@@ -590,10 +624,10 @@ export async function getDashboardSnapshot(
       lastMonth: formatMoneyMap(lastMap),
       lastMonthHelper: `${countRecognizedInRange(records, monthBounds.lastMonth.start, monthBounds.lastMonth.end, currency)} withdrawals`,
       quarterToDate: formatMoneyMap(quarterMap),
-      quarterHelper: `${countRecognizedInRange(records, quarterBounds.start, quarterBounds.end, currency)} payouts this quarter`,
+      quarterHelper,
       quarterLabel,
       yearToDate: formatMoneyMap(yearMap),
-      yearHelper: `${countRecognizedInRange(records, yearBounds.start, yearBounds.end, currency)} payouts this year`,
+      yearHelper,
       yearLabel,
       lifetime: formatMoneyMap(lifetime),
       lifetimeHelper: `${countRecognizedPayouts(records)} paid payouts`,
@@ -662,6 +696,12 @@ export async function getDashboardSnapshot(
       .sort((a, b) => b.amountRaw - a.amountRaw)
       .slice(0, 5),
     profitByAccount: profitByAccountList.sort((a, b) => b.amountRaw - a.amountRaw).slice(0, 5),
+    periodNav: {
+      quarterOffset,
+      yearOffset,
+      minQuarterOffset,
+      minYearOffset,
+    },
     recentWithdrawals: recentWd.map((row) => ({
       id: row.withdrawal.id,
       amount: row.withdrawal.amount,
@@ -694,4 +734,28 @@ function formatPercentOneDecimal(value: string): string {
   if (!Number.isFinite(n)) return value;
   const sign = n > 0 ? '+' : n < 0 ? '−' : '';
   return `${sign}${Math.abs(n).toFixed(1)}%`;
+}
+
+function clampOffset(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return max;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+/** UTC quarter index from an arbitrary epoch (year*4 + q). */
+function utcQuarterIndex(d: Date): number {
+  return d.getUTCFullYear() * 4 + Math.floor(d.getUTCMonth() / 3);
+}
+
+function quarterIndexDiff(earlier: Date, later: Date): number {
+  return utcQuarterIndex(later) - utcQuarterIndex(earlier);
+}
+
+function shiftByQuarters(now: Date, offset: number): Date {
+  const y = now.getUTCFullYear();
+  const qStart = Math.floor(now.getUTCMonth() / 3) * 3;
+  return new Date(Date.UTC(y, qStart + offset * 3, 15, 12, 0, 0, 0));
+}
+
+function shiftByYears(now: Date, offset: number): Date {
+  return new Date(Date.UTC(now.getUTCFullYear() + offset, 6, 1, 12, 0, 0, 0));
 }
