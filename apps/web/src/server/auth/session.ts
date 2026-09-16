@@ -1,6 +1,7 @@
 import { createId, loginEvents, sessions, users } from '@fpm/db';
 import { and, eq, gt } from 'drizzle-orm';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import { getDb } from '../db';
 import { getServerEnv } from '../env';
 import { AppError } from '../errors';
@@ -47,7 +48,8 @@ export async function getSessionTokenFromCookies(): Promise<string | undefined> 
   return jar.get(SESSION_COOKIE)?.value;
 }
 
-export async function getAuthenticatedUser() {
+/** Deduped per RSC request so layout + page actions share one session lookup. */
+export const getAuthenticatedUser = cache(async () => {
   const token = await getSessionTokenFromCookies();
   if (!token) {
     return null;
@@ -73,7 +75,7 @@ export async function getAuthenticatedUser() {
     name: row.user.name,
     sessionId: row.session.id,
   };
-}
+});
 
 export async function requireAuthenticatedUser() {
   const user = await getAuthenticatedUser();

@@ -1,16 +1,5 @@
-import {
-  Badge,
-  EmptyState,
-  PageHeader,
-  Select,
-  Button,
-  Table,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
-} from '@fpm/ui';
+import { Badge, EmptyState, PageHeader, Select, Table, TBody, TD, TH, THead, TR } from '@fpm/ui';
+import { SoftFilterForm } from '@/components/soft-filter-form';
 import { listAuditLogsAction } from '@/server/actions/audit';
 
 export default async function AuditLogPage({
@@ -43,8 +32,7 @@ export default async function AuditLogPage({
         description="Append-only security and mutation history. Rows are never updated or deleted."
       />
 
-      <form
-        method="get"
+      <SoftFilterForm
         style={{ display: 'flex', gap: 12, alignItems: 'end', marginBottom: 16, flexWrap: 'wrap' }}
       >
         <label style={{ display: 'grid', gap: 6, fontSize: 13 }}>
@@ -73,11 +61,8 @@ export default async function AuditLogPage({
             <option value="EXPORT">EXPORT</option>
           </Select>
         </label>
-        <Button type="submit" variant="secondary" size="sm">
-          Filter
-        </Button>
         <span style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>{total} events</span>
-      </form>
+      </SoftFilterForm>
 
       {items.length === 0 ? (
         <EmptyState

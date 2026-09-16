@@ -707,6 +707,71 @@
   max-width: 1400px;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fpm-route-loading {
+  display: grid;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.fpm-skeleton {
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--fpm-border) 70%, transparent) 0%,
+    color-mix(in srgb, var(--fpm-hover) 90%, transparent) 50%,
+    color-mix(in srgb, var(--fpm-border) 70%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: fpm-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.fpm-skeleton--title {
+  height: 28px;
+  width: min(280px, 55%);
+}
+
+.fpm-skeleton--subtitle {
+  height: 14px;
+  width: min(420px, 70%);
+}
+
+.fpm-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.fpm-skeleton--card {
+  height: 88px;
+}
+
+.fpm-skeleton--table {
+  height: 220px;
+  margin-top: 8px;
+}
+
+@keyframes fpm-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .fpm-shell__mobile-bar {
   display: none;
   align-items: center;

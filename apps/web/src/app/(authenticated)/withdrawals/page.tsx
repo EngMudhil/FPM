@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
   Badge,
-  Button,
   Card,
   EmptyState,
   PageHeader,
@@ -13,6 +12,7 @@ import {
   THead,
   TR,
 } from '@fpm/ui';
+import { SoftFilterForm } from '@/components/soft-filter-form';
 import { listWithdrawalsAction } from '@/server/actions/withdrawals';
 
 function statusTone(status: string) {
@@ -89,10 +89,7 @@ export default async function WithdrawalsPage({
         </Card>
       </div>
 
-      <form
-        method="get"
-        style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}
-      >
+      <SoftFilterForm style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
         <Select name="status" defaultValue={params.status ?? ''} style={{ maxWidth: 180 }}>
           <option value="">All statuses</option>
           <option value="PENDING">Pending</option>
@@ -100,13 +97,10 @@ export default async function WithdrawalsPage({
           <option value="FAILED">Failed</option>
           <option value="REVERSED">Reversed</option>
         </Select>
-        <Button type="submit" variant="secondary" size="sm">
-          Filter
-        </Button>
         <span style={{ color: 'var(--fpm-text-muted)', fontSize: 13 }}>
           {total} withdrawal{total === 1 ? '' : 's'}
         </span>
-      </form>
+      </SoftFilterForm>
 
       {items.length === 0 ? (
         <EmptyState

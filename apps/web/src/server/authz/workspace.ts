@@ -1,5 +1,6 @@
 import { createId, workspaceMembers, workspaces, type WorkspaceRole } from '@fpm/db';
 import { and, eq } from 'drizzle-orm';
+import { cache } from 'react';
 import { getDb } from '../db';
 import { AppError } from '../errors';
 import { requireAuthenticatedUser } from '../auth/session';
@@ -45,8 +46,8 @@ export async function requireWorkspaceRole(workspaceId: string, minimumRole: Wor
   return access;
 }
 
-/** Resolves the caller's primary owned/member workspace (single-operator default). */
-export async function requirePrimaryWorkspace() {
+/** Resolves the caller's primary owned/member workspace (single-operator default). Deduped per RSC request. */
+export const requirePrimaryWorkspace = cache(async () => {
   const user = await requireAuthenticatedUser();
   const db = getDb();
   const rows = await db
@@ -68,7 +69,7 @@ export async function requirePrimaryWorkspace() {
     workspace: row.workspace,
     role: row.membership.role,
   };
-}
+});
 
 export async function createOwnedWorkspace(input: {
   userId: string;
