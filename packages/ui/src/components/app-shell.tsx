@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { fpmNavGroups, isNavItemActive, type NavGroup } from '../navigation';
 import { Button } from './button';
 import { NavIcon } from './nav-icon';
+import { FpmLink } from './fpm-link';
 
 export type SidebarProps = {
   pathname: string;
@@ -42,16 +43,17 @@ export function Sidebar({
             {group.items.map((item) => {
               const active = isNavItemActive(pathname, item.href);
               return (
-                <a
+                <FpmLink
                   key={item.href}
                   href={item.href}
                   className="fpm-sidebar__link"
                   aria-current={active ? 'page' : undefined}
                   onClick={onNavigate}
+                  prefetch
                 >
                   {item.icon ? <NavIcon name={item.icon} /> : null}
                   <span>{item.label}</span>
-                </a>
+                </FpmLink>
               );
             })}
           </div>

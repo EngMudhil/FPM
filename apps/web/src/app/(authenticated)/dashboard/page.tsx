@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { Alert, Badge, Card, EmptyState, MetricCard } from '@fpm/ui';
 import { formatDisplayMoney } from '@fpm/money';
 import { getDashboardAction } from '@/server/actions/dashboard';
 import { getSessionAction } from '@/server/actions/auth';
+import { PeriodNav } from '@/components/period-nav';
 
 function statusTone(status: string) {
   if (status === 'PAID') return 'success' as const;
@@ -38,75 +39,6 @@ function Icon({ d, paths }: { d?: string; paths?: string[] }) {
         <path key={p} d={p} strokeLinecap="round" strokeLinejoin="round" />
       ))}
     </svg>
-  );
-}
-
-function PeriodNav({
-  prevHref,
-  nextHref,
-  canPrev,
-  canNext,
-  prevLabel,
-  nextLabel,
-}: {
-  prevHref: string;
-  nextHref: string;
-  canPrev: boolean;
-  canNext: boolean;
-  prevLabel: string;
-  nextLabel: string;
-}) {
-  const btnStyle = (enabled: boolean): CSSProperties => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    border: '1px solid #E2E8F0',
-    background: enabled ? '#fff' : '#F8FAFC',
-    color: enabled ? '#0F172A' : '#CBD5E1',
-    textDecoration: 'none',
-    cursor: enabled ? 'pointer' : 'not-allowed',
-    pointerEvents: enabled ? 'auto' : 'none',
-    fontSize: 18,
-    lineHeight: 1,
-    fontWeight: 700,
-    position: 'relative',
-    zIndex: 5,
-    userSelect: 'none',
-  });
-
-  return (
-    <div
-      className="fpm-metric-card__nav"
-      style={{
-        display: 'inline-flex',
-        gap: 6,
-        position: 'relative',
-        zIndex: 5,
-        pointerEvents: 'auto',
-      }}
-    >
-      {canPrev ? (
-        <a href={prevHref} aria-label={prevLabel} style={btnStyle(true)} title={prevLabel}>
-          ‹
-        </a>
-      ) : (
-        <span aria-disabled="true" style={btnStyle(false)} title={prevLabel}>
-          ‹
-        </span>
-      )}
-      {canNext ? (
-        <a href={nextHref} aria-label={nextLabel} style={btnStyle(true)} title={nextLabel}>
-          ›
-        </a>
-      ) : (
-        <span aria-disabled="true" style={btnStyle(false)} title={nextLabel}>
-          ›
-        </span>
-      )}
-    </div>
   );
 }
 

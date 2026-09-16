@@ -33,3 +33,5 @@ export { PageHeader, Breadcrumbs } from './components/page-header';
 export type { PageHeaderProps, BreadcrumbsProps, BreadcrumbItem } from './components/page-header';
 export { AppShell, Sidebar } from './components/app-shell';
 export type { AppShellProps, SidebarProps } from './components/app-shell';
+export { FpmLink, FpmLinkProvider, useFpmLink } from './components/fpm-link';
+export type { FpmLinkProps, FpmLinkComponent } from './components/fpm-link';
