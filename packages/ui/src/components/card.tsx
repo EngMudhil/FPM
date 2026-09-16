@@ -40,7 +40,10 @@ export function MetricCard({
     <div className={cn('fpm-metric-card', `fpm-metric-card--${tone}`, className)}>
       <div className="fpm-metric-card__top">
         {icon ? <div className="fpm-metric-card__icon">{icon}</div> : <span />}
-        {badge ?? headerRight ?? null}
+        <div className="fpm-metric-card__top-right">
+          {badge}
+          {headerRight}
+        </div>
       </div>
       <div className="fpm-metric-card__label">{label}</div>
       <div

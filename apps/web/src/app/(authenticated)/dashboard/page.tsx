@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { Alert, Badge, Card, EmptyState, MetricCard } from '@fpm/ui';
 import { formatDisplayMoney } from '@fpm/money';
@@ -56,31 +56,53 @@ function PeriodNav({
   prevLabel: string;
   nextLabel: string;
 }) {
+  const btnStyle = (enabled: boolean): CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    border: '1px solid #E2E8F0',
+    background: enabled ? '#fff' : '#F8FAFC',
+    color: enabled ? '#0F172A' : '#CBD5E1',
+    textDecoration: 'none',
+    cursor: enabled ? 'pointer' : 'not-allowed',
+    pointerEvents: enabled ? 'auto' : 'none',
+    fontSize: 18,
+    lineHeight: 1,
+    fontWeight: 700,
+    position: 'relative',
+    zIndex: 5,
+    userSelect: 'none',
+  });
+
   return (
-    <div className="fpm-metric-card__nav">
+    <div
+      className="fpm-metric-card__nav"
+      style={{
+        display: 'inline-flex',
+        gap: 6,
+        position: 'relative',
+        zIndex: 5,
+        pointerEvents: 'auto',
+      }}
+    >
       {canPrev ? (
-        <Link
-          href={prevHref}
-          aria-label={prevLabel}
-          style={{ textDecoration: 'none', color: 'inherit' }}
-        >
+        <a href={prevHref} aria-label={prevLabel} style={btnStyle(true)} title={prevLabel}>
           ‹
-        </Link>
+        </a>
       ) : (
-        <span aria-disabled="true" style={{ opacity: 0.35 }}>
+        <span aria-disabled="true" style={btnStyle(false)} title={prevLabel}>
           ‹
         </span>
       )}
       {canNext ? (
-        <Link
-          href={nextHref}
-          aria-label={nextLabel}
-          style={{ textDecoration: 'none', color: 'inherit' }}
-        >
+        <a href={nextHref} aria-label={nextLabel} style={btnStyle(true)} title={nextLabel}>
           ›
-        </Link>
+        </a>
       ) : (
-        <span aria-disabled="true" style={{ opacity: 0.35 }}>
+        <span aria-disabled="true" style={btnStyle(false)} title={nextLabel}>
           ›
         </span>
       )}
