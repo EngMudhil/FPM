@@ -41,13 +41,59 @@ function Icon({ d, paths }: { d?: string; paths?: string[] }) {
   );
 }
 
-function PeriodNav() {
+function PeriodNav({
+  prevHref,
+  nextHref,
+  canPrev,
+  canNext,
+  prevLabel,
+  nextLabel,
+}: {
+  prevHref: string;
+  nextHref: string;
+  canPrev: boolean;
+  canNext: boolean;
+  prevLabel: string;
+  nextLabel: string;
+}) {
   return (
-    <div className="fpm-metric-card__nav" aria-hidden>
-      <span>‹</span>
-      <span>›</span>
+    <div className="fpm-metric-card__nav">
+      {canPrev ? (
+        <Link
+          href={prevHref}
+          aria-label={prevLabel}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          ‹
+        </Link>
+      ) : (
+        <span aria-disabled="true" style={{ opacity: 0.35 }}>
+          ‹
+        </span>
+      )}
+      {canNext ? (
+        <Link
+          href={nextHref}
+          aria-label={nextLabel}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          ›
+        </Link>
+      ) : (
+        <span aria-disabled="true" style={{ opacity: 0.35 }}>
+          ›
+        </span>
+      )}
     </div>
   );
+}
+
+function dashHref(q: number, y: number): string {
+  const params = new URLSearchParams();
+  if (q !== 0) params.set('q', String(q));
+  if (y !== 0) params.set('y', String(y));
+  const qs = params.toString();
+  return qs ? `/dashboard?${qs}` : '/dashboard';
 }
 
 function SectionDivider({ title, subtitle }: { title: string; subtitle: string }) {
@@ -71,11 +117,11 @@ function SectionDivider({ title, subtitle }: { title: string; subtitle: string }
 
 function AreaChart({ points }: { points: Array<{ label: string; amountRaw: number }> }) {
   const width = 720;
-  const height = 200;
-  const padL = 8;
-  const padR = 48;
+  const height = 220;
+  const padL = 48;
+  const padR = 16;
   const padT = 12;
-  const padB = 28;
+  const padB = 32;
   const max = Math.max(...points.map((p) => p.amountRaw), 1);
   const coords = points.map((p, i) => {
     const x = padL + (i / Math.max(points.length - 1, 1)) * (width - padL - padR);
@@ -84,42 +130,50 @@ function AreaChart({ points }: { points: Array<{ label: string; amountRaw: numbe
   });
   const line = coords.map((c) => `${c.x},${c.y}`).join(' ');
   const area = `${padL},${height - padB} ${line} ${coords[coords.length - 1]?.x ?? padL},${height - padB}`;
-  const yTicks = [1, 0.66, 0.33].map((f) => {
+  const tickFracs = [0, 1 / 3, 2 / 3, 1];
+  const yTicks = tickFracs.map((f) => {
     const v = max * f;
-    return v >= 1000 ? `$${Math.round(v / 1000)}K` : `$${Math.round(v)}`;
+    const label = v >= 1000 ? `$${Math.round(v / 1000)}K` : `$${Math.round(v)}`;
+    const y = padT + (1 - f) * (height - padT - padB);
+    return { label, y };
   });
 
   return (
     <div>
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="200" role="img">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        width="100%"
+        height="220"
+        role="img"
+        aria-label="Lifetime income growth chart"
+      >
         <defs>
           <linearGradient id="fpmIncomeFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32" />
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.02" />
           </linearGradient>
         </defs>
-        {yTicks.map((label, i) => {
-          const y = padT + (i / (yTicks.length - 1 || 1)) * (height - padT - padB);
-          return (
-            <g key={label}>
-              <line
-                x1={padL}
-                x2={width - padR}
-                y1={y}
-                y2={y}
-                stroke="color-mix(in srgb, #0f172a 6%, transparent)"
-              />
-              <text x={width - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#94a3b8">
-                {label}
-              </text>
-            </g>
-          );
-        })}
+        {yTicks.map((tick) => (
+          <g key={tick.label + tick.y}>
+            <line
+              x1={padL}
+              x2={width - padR}
+              y1={tick.y}
+              y2={tick.y}
+              stroke="#99f6e4"
+              strokeDasharray="3 4"
+              strokeOpacity="0.7"
+            />
+            <text x={padL - 8} y={tick.y + 4} textAnchor="end" fontSize="11" fill="#5eead4">
+              {tick.label}
+            </text>
+          </g>
+        ))}
         <polygon points={area} fill="url(#fpmIncomeFill)" />
         <polyline
           points={line}
           fill="none"
-          stroke="#7c3aed"
+          stroke="#0d9488"
           strokeWidth="3"
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -129,7 +183,7 @@ function AreaChart({ points }: { points: Array<{ label: string; amountRaw: numbe
             cx={coords[coords.length - 1]!.x}
             cy={coords[coords.length - 1]!.y}
             r="5"
-            fill="#7c3aed"
+            fill="#0d9488"
           />
         ) : null}
         {coords.map((c, i) =>
@@ -137,10 +191,10 @@ function AreaChart({ points }: { points: Array<{ label: string; amountRaw: numbe
             <text
               key={c.label + i}
               x={c.x}
-              y={height - 6}
+              y={height - 8}
               textAnchor="middle"
               fontSize="11"
-              fill="#94a3b8"
+              fill="#5eead4"
             >
               {c.label}
             </text>
@@ -324,8 +378,21 @@ function SnapshotStat({
   );
 }
 
-export default async function DashboardPage() {
-  const [session, result] = await Promise.all([getSessionAction(), getDashboardAction()]);
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; y?: string }>;
+}) {
+  const params = await searchParams;
+  const requestedQ = Number.parseInt(params.q ?? '0', 10);
+  const requestedY = Number.parseInt(params.y ?? '0', 10);
+  const [session, result] = await Promise.all([
+    getSessionAction(),
+    getDashboardAction({
+      quarterOffset: Number.isFinite(requestedQ) ? requestedQ : 0,
+      yearOffset: Number.isFinite(requestedY) ? requestedY : 0,
+    }),
+  ]);
   if (!result.ok) {
     if (result.error.code === 'UNAUTHENTICATED') redirect('/login');
     return <EmptyState title="Unable to load dashboard" description={result.error.message} />;
@@ -333,6 +400,7 @@ export default async function DashboardPage() {
 
   const { snapshot } = result;
   const m = snapshot.metrics;
+  const nav = snapshot.periodNav;
   const firstName =
     session.ok && session.user.name
       ? session.user.name.split(/\s+/)[0]
@@ -344,6 +412,9 @@ export default async function DashboardPage() {
     m.thisMonthChange && m.thisMonthChange !== '0%'
       ? m.thisMonthChange.replace('+', '').replace('-', '↓ ')
       : null;
+
+  const q = nav.quarterOffset;
+  const y = nav.yearOffset;
 
   const combinedProfitNegative =
     m.combinedGeneratedProfit.startsWith('−') || m.combinedGeneratedProfit.startsWith('-');
@@ -555,7 +626,16 @@ export default async function DashboardPage() {
             helper={m.quarterHelper}
             tone="green"
             icon={<Icon paths={['M4 20V10', 'M10 20V4', 'M16 20v-8', 'M22 20V12']} />}
-            headerRight={<PeriodNav />}
+            headerRight={
+              <PeriodNav
+                prevHref={dashHref(q - 1, y)}
+                nextHref={dashHref(q + 1, y)}
+                canPrev={q > nav.minQuarterOffset}
+                canNext={q < 0}
+                prevLabel="Previous quarter"
+                nextLabel="Next quarter"
+              />
+            }
           />
           <MetricCard
             label={m.yearLabel}
@@ -563,7 +643,16 @@ export default async function DashboardPage() {
             helper={m.yearHelper}
             tone="teal"
             icon={<Icon paths={['M3 17 9 11l4 4 8-8', 'M14 7h7v7']} />}
-            headerRight={<PeriodNav />}
+            headerRight={
+              <PeriodNav
+                prevHref={dashHref(q, y - 1)}
+                nextHref={dashHref(q, y + 1)}
+                canPrev={y > nav.minYearOffset}
+                canNext={y < 0}
+                prevLabel="Previous year"
+                nextLabel="Next year"
+              />
+            }
           />
           <MetricCard
             label="Lifetime income"
@@ -654,7 +743,12 @@ export default async function DashboardPage() {
         </div>
       </Card>
 
-      <Card style={{ background: 'color-mix(in srgb, #ccfbf1 40%, #fff)' }}>
+      <Card
+        style={{
+          background: 'linear-gradient(180deg, #f0fdfa 0%, #ecfdf5 100%)',
+          border: '1px solid #99f6e4',
+        }}
+      >
         <div
           style={{
             display: 'flex',
@@ -664,11 +758,30 @@ export default async function DashboardPage() {
             marginBottom: 8,
           }}
         >
-          <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Lifetime Income Growth</h2>
-            <p style={{ margin: '4px 0 0', color: 'var(--fpm-text-muted)', fontSize: 13 }}>
-              Cumulative withdrawal income over time
-            </p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div
+              aria-hidden
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                display: 'grid',
+                placeItems: 'center',
+                background: '#ccfbf1',
+                color: '#0f766e',
+                flexShrink: 0,
+              }}
+            >
+              <Icon paths={['M3 17 9 11l4 4 8-8', 'M14 7h7v7']} />
+            </div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#115e59' }}>
+                Lifetime Income Growth
+              </h2>
+              <p style={{ margin: '4px 0 0', color: '#0f766e', fontSize: 13, opacity: 0.85 }}>
+                Cumulative withdrawal income over time
+              </p>
+            </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div
@@ -677,12 +790,12 @@ export default async function DashboardPage() {
                 fontWeight: 700,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
-                color: 'var(--fpm-text-muted)',
+                color: '#14b8a6',
               }}
             >
               Current lifetime income
             </div>
-            <div style={{ fontSize: 28, fontWeight: 750, color: '#0f766e' }}>{m.lifetime}</div>
+            <div style={{ fontSize: 28, fontWeight: 750, color: '#115e59' }}>{m.lifetime}</div>
           </div>
         </div>
         <AreaChart points={snapshot.cumulativeIncome} />

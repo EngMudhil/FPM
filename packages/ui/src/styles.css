@@ -264,7 +264,8 @@
   gap: 2px;
 }
 
-.fpm-metric-card__nav span {
+.fpm-metric-card__nav span,
+.fpm-metric-card__nav a {
   width: 22px;
   height: 22px;
   border-radius: 6px;
@@ -273,6 +274,11 @@
   font-size: 12px;
   color: var(--fpm-text-muted);
   background: color-mix(in srgb, #0f172a 5%, transparent);
+}
+
+.fpm-metric-card__nav a:hover {
+  background: color-mix(in srgb, #0f172a 10%, transparent);
+  color: var(--fpm-text);
 }
 
 .fpm-metric-card--yellow {
